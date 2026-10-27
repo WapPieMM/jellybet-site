@@ -53,6 +53,8 @@
         <div class="account-grid" id="accountGrid"><div class="empty-state card"><span>୨୧</span><p>กำลังโหลดรายการ Account…</p><small>รอสักครู่นะคะ</small></div></div>
       </section>
 
+      <section class="section-block" id="music"><div class="section-heading"><div><p class="eyebrow">A LITTLE SOUND ♡</p><h2>เพลงของร้าน</h2></div><span class="soft-tag" id="musicCount">0 เพลง</span></div><p class="accounts-intro">เลือกเพลงที่ชอบแล้วกดเล่นได้เลยค่ะ ♡</p><div class="music-grid" id="musicGrid"><div class="empty-state card"><span>♫</span><p>กำลังโหลดเพลง…</p></div></div></section>
+
       <section class="section-block" id="reviews">
         <div class="section-heading"><div><p class="eyebrow">KIND WORDS ♡</p><h2>เครดิต & รีวิว</h2></div><span class="soft-tag" id="reviewCount">0 รีวิว</span></div>
         <div class="stats-grid">
@@ -98,7 +100,7 @@
       </div>
       <div id="adminDashboard" hidden>
         <p class="eyebrow" id="adminEyebrow">JELLYBET CONTROL ROOM</p><h2>จัดการหน้าร้าน <span id="adminSiteName">jellybet</span> ♡</h2>
-        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="accountsAdmin">จัดการ Account</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
+        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="accountsAdmin">จัดการ Account</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button><button class="tab-button" data-tab="musicAdmin">จัดการเพลง</button></div>
         <div id="settingsTab">
           <form id="settingsForm" class="admin-form">
             <label>ชื่อร้าน<input id="editShopName" required maxlength="60"></label>
@@ -146,6 +148,7 @@
           </form>
           <div class="admin-account-list" id="adminAccountList"></div>
         </div>
+        <div id="musicAdminTab" hidden><form id="musicForm" class="admin-form review-editor"><h3 id="musicFormTitle">เพิ่มเพลงใหม่ ♫</h3><input type="hidden" id="editMusicId"><label>ชื่อเพลง<input id="musicTitle" required maxlength="120" placeholder="ชื่อเพลง"></label><label>ชื่อศิลปิน (ไม่บังคับ)<input id="musicArtist" maxlength="120" placeholder="ชื่อศิลปิน"></label><label>ไฟล์เพลง (MP3, WAV, OGG, M4A)<input id="musicFile" type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a"></label><div class="image-preview-row"><audio id="musicFilePreview" controls hidden></audio></div><small class="upload-note">ไฟล์เสียงไม่เกิน 15 MB แนะนำ MP3</small><label class="checkbox-label"><input id="musicPublished" type="checkbox" checked> แสดงเพลงบนหน้าเว็บไซต์</label><button class="primary-button" type="submit">บันทึกเพลง ♡</button><button class="secondary-button" type="button" id="cancelMusicEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="musicMessage" role="status"></p></form><div class="admin-review-list" id="adminMusicList"></div></div>
         <div id="reviewsAdminTab" hidden>
           <form id="reviewForm" class="admin-form review-editor"><h3 id="reviewFormTitle">เพิ่มรีวิวใหม่</h3><input type="hidden" id="editReviewId"><label>ชื่อลูกค้า/ชื่อที่ใช้แสดง<input id="reviewCustomer" required maxlength="60" placeholder="เช่น ลูกค้าท่านหนึ่ง"></label><label>คะแนน<select id="reviewRating"><option value="5">5 ดาว</option><option value="4">4 ดาว</option><option value="3">3 ดาว</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="reviewText" rows="3" required maxlength="1000" placeholder="ข้อความรีวิวที่ได้รับอนุญาตให้เผยแพร่"></textarea></label><label>อัปโหลดรูปประกอบรีวิวจากเครื่อง/มือถือ (ถ้ามี)<input type="file" id="reviewImageFile" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="reviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับรูปไม่เกิน 5 MB</small><label class="checkbox-label"><input type="checkbox" id="reviewPublished" checked> แสดงรีวิวบนหน้าเว็บ</label><button class="primary-button" type="submit">บันทึกรีวิว</button><button class="secondary-button" type="button" id="cancelReviewEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="reviewMessage" role="status"></p></form>
           <div class="admin-review-list" id="adminReviewList"></div>
