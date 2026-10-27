@@ -46,6 +46,12 @@
         <p>เช็กเครดิต รีวิว และช่องทางติดต่อร้านได้ที่นี่เลยค่ะ</p>
       </section>
 
+      <section class="section-block" id="accounts">
+        <div class="section-heading"><div><p class="eyebrow">LITTLE TREASURES ♡</p><h2>Account พร้อมขาย</h2></div><span class="soft-tag" id="accountCount">0 รายการ</span></div>
+        <p class="accounts-intro">เลือกรายการที่ถูกใจ แล้วทักร้านเพื่อสอบถามรายละเอียดเพิ่มเติมได้เลยค่ะ ♡</p>
+        <div class="account-grid" id="accountGrid"><div class="empty-state card"><span>୨୧</span><p>กำลังโหลดรายการ Account…</p><small>รอสักครู่นะคะ</small></div></div>
+      </section>
+
       <section class="section-block" id="reviews">
         <div class="section-heading"><div><p class="eyebrow">KIND WORDS ♡</p><h2>เครดิต & รีวิว</h2></div><span class="soft-tag" id="reviewCount">0 รีวิว</span></div>
         <div class="stats-grid">
@@ -75,6 +81,7 @@
 
   <nav class="bottom-nav" aria-label="เมนูหลัก">
     <a class="nav-item active" href="#home"><span>✿</span><small>หน้าหลัก</small></a>
+    <a class="nav-item" href="#accounts"><span>୨୧</span><small>Account</small></a>
     <a class="nav-item" href="#reviews"><span>♡</span><small>เครดิต</small></a>
     <a class="nav-item" href="#contact"><span>✉</span><small>ติดต่อ</small></a>
   </nav>
@@ -90,7 +97,7 @@
       </div>
       <div id="adminDashboard" hidden>
         <p class="eyebrow" id="adminEyebrow">JELLYBET CONTROL ROOM</p><h2>จัดการหน้าร้าน <span id="adminSiteName">jellybet</span> ♡</h2>
-        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
+        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="accountsAdmin">จัดการ Account</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
         <div id="settingsTab">
           <form id="settingsForm" class="admin-form">
             <label>ชื่อร้าน<input id="editShopName" required maxlength="60"></label>
@@ -120,6 +127,23 @@
             <div class="theme-preview" id="themePreview"><span>୨୧ jellybet ♡</span><small>ตัวอย่างสีเว็บไซต์ของคุณ</small><button type="button" tabindex="-1">ปุ่มตัวอย่าง</button></div>
             <button class="primary-button" type="submit">บันทึกธีมเว็บไซต์ ♡</button><button class="secondary-button" type="button" id="resetTheme">คืนค่าสีธีมที่เลือก</button><p class="form-message" id="themeMessage" role="status"></p>
           </form>
+        </div>
+        <div id="accountsAdminTab" hidden>
+          <form id="accountForm" class="admin-form review-editor">
+            <h3 id="accountFormTitle">เพิ่ม Account พร้อมขาย</h3>
+            <input type="hidden" id="editAccountId">
+            <label>ชื่อรายการ / ชื่อ Account<input id="accountTitle" required maxlength="100" placeholder="เช่น Account เลเวลสูง"></label>
+            <label>รายละเอียด<textarea id="accountDescription" rows="3" maxlength="1500" placeholder="รายละเอียด จุดเด่น สิ่งที่ลูกค้าจะได้รับ"></textarea></label>
+            <label>ราคา (บาท)<input id="accountPrice" type="number" required min="0" max="999999999" step="0.01" placeholder="เช่น 450"></label>
+            <label>สถานะรายการ<select id="accountStatus"><option value="available">พร้อมขาย</option><option value="sold">ขายแล้ว</option></select></label>
+            <label>รูปภาพ Account (จากมือถือ/คอมพิวเตอร์)<input id="accountImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+            <div class="image-preview-row"><img id="accountImagePreview" alt="ตัวอย่างรูป Account" hidden></div>
+            <small class="upload-note">รองรับ JPG, PNG, WEBP, GIF ขนาดไม่เกิน 5 MB</small>
+            <button class="primary-button" type="submit">บันทึกรายการ Account ♡</button>
+            <button class="secondary-button" type="button" id="cancelAccountEdit" hidden>ยกเลิกการแก้ไข</button>
+            <p class="form-message" id="accountMessage" role="status"></p>
+          </form>
+          <div class="admin-account-list" id="adminAccountList"></div>
         </div>
         <div id="reviewsAdminTab" hidden>
           <form id="reviewForm" class="admin-form review-editor"><h3 id="reviewFormTitle">เพิ่มรีวิวใหม่</h3><input type="hidden" id="editReviewId"><label>ชื่อลูกค้า/ชื่อที่ใช้แสดง<input id="reviewCustomer" required maxlength="60" placeholder="เช่น ลูกค้าท่านหนึ่ง"></label><label>คะแนน<select id="reviewRating"><option value="5">5 ดาว</option><option value="4">4 ดาว</option><option value="3">3 ดาว</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="reviewText" rows="3" required maxlength="1000" placeholder="ข้อความรีวิวที่ได้รับอนุญาตให้เผยแพร่"></textarea></label><label>อัปโหลดรูปประกอบรีวิวจากเครื่อง/มือถือ (ถ้ามี)<input type="file" id="reviewImageFile" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="reviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับรูปไม่เกิน 5 MB</small><label class="checkbox-label"><input type="checkbox" id="reviewPublished" checked> แสดงรีวิวบนหน้าเว็บ</label><button class="primary-button" type="submit">บันทึกรีวิว</button><button class="secondary-button" type="button" id="cancelReviewEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="reviewMessage" role="status"></p></form>
