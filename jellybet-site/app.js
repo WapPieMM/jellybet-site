@@ -4,7 +4,7 @@
   const configured = !!(window.supabase && cfg.supabaseUrl && cfg.supabaseAnonKey && !cfg.supabaseUrl.includes('YOUR-PROJECT') && !cfg.supabaseAnonKey.includes('YOUR_SUPABASE'));
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
   const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b' };
-  let settings = { ...defaultSettings }, reviews = [], currentUser = null;
+  let settings = { ...defaultSettings }, reviews = [], accounts = [], currentUser = null;
   const contactDefs = [
     {key:'line',label:'LINE',icon:'♡',hint:'พูดคุยและสอบถามข้อมูล'},
     {key:'x',label:'X / Twitter',icon:'𝕏',hint:'ติดตามข่าวสารของร้าน'},
@@ -65,6 +65,40 @@
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
   }
+  function renderAccounts(){
+    const grid=$('accountGrid'); if(!grid)return;
+    const available=accounts.filter(a=>a.status==='available');
+    $('accountCount').textContent=`${available.length} พร้อมขาย`;
+    const contactHref=linkFor('line',settings.line)||'#contact';
+    grid.innerHTML=accounts.length ? accounts.map(a=>{
+      const sold=a.status==='sold';
+      const image=a.image_url ? `<img class="account-image" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}" loading="lazy">` : '<div class="account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
+      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${sold?'sold':'available'}">${sold?'ขายแล้ว':'พร้อมขาย'}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description">${escapeHtml(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ')}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong>${sold?'<span class="sold-note">รายการนี้ขายแล้ว ♡</span>':`<a class="account-contact-button" href="${escapeHtml(contactHref)}" ${contactHref==='#contact'?'':'target="_blank" rel="noopener noreferrer"'}>สนใจรายการนี้ ↗</a>`}</div></div></article>`;
+    }).join('') : '<div class="empty-state card account-empty"><span>୨୧</span><p>ยังไม่มี Account ลงขายในตอนนี้</p><small>แวะกลับมาดูรายการใหม่ได้อีกนะคะ ♡</small></div>';
+    renderAdminAccounts();
+  }
+  async function loadPublicAccounts(){
+    if(!db){accounts=[];renderAccounts();return;}
+    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();}
+    catch(err){console.warn('Account listing unavailable until database schema is applied:',err);accounts=[];renderAccounts();}
+  }
+  function renderAdminAccounts(){
+    const list=$('adminAccountList');if(!list)return;
+    if(!currentUser){list.innerHTML='';return;}
+    list.innerHTML=accounts.length?accounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ${a.status==='sold'?'ขายแล้ว':'พร้อมขาย'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">${a.status==='sold'?'ตั้งเป็นพร้อมขาย':'ตั้งเป็นขายแล้ว'}</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
+  }
+  async function refreshAccounts(){
+    if(!db)return;
+    const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});
+    if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
+    accounts=data||[];renderAccounts();
+  }
+  function resetAccountForm(){
+    $('accountForm').reset();$('editAccountId').value='';$('accountStatus').value='available';
+    $('accountFormTitle').textContent='เพิ่ม Account พร้อมขาย';$('cancelAccountEdit').hidden=true;
+    const img=$('accountImagePreview');if(img){img.hidden=true;img.removeAttribute('src');}
+    setMessage('accountMessage','');
+  }
   function renderReviews(){
     const published=reviews.filter(r=>r.published);
     $('statReviews').textContent=published.length; $('reviewCount').textContent=`${published.length} รีวิว`;
@@ -73,7 +107,7 @@
     renderAdminReviews();
   }
   async function loadPublic(){
-    if(!db){ settings={...defaultSettings}; reviews=[]; renderSettings(); renderReviews(); $('setupHint').textContent='เว็บแสดงตัวอย่างได้แล้ว หากต้องการบันทึกข้อมูลจริงและใช้หลังบ้าน ให้ตั้งค่า Supabase ตาม README.md'; return; }
+    if(!db){ settings={...defaultSettings}; reviews=[]; accounts=[]; renderSettings(); renderReviews(); renderAccounts(); $('setupHint').textContent='เว็บแสดงตัวอย่างได้แล้ว หากต้องการบันทึกข้อมูลจริงและใช้หลังบ้าน ให้ตั้งค่า Supabase ตาม README.md'; return; }
     try{
       const [{data:setting,error:sErr},{data:reviewData,error:rErr}]=await Promise.all([
         db.from('site_settings').select('*').eq('id',1).maybeSingle(),
@@ -93,6 +127,28 @@
     if(!currentUser){list.innerHTML='';return;}
     list.innerHTML=reviews.length ? reviews.map(r=>`<div class="admin-review-item"><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')} · ${'★'.repeat(Number(r.rating||5))}</strong><p>${escapeHtml(r.review_text||'')}</p><small>${r.published?'แสดงบนหน้าเว็บ':'ซ่อนอยู่'} · ${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH'):''}</small><div class="admin-item-actions"><button data-edit-review="${escapeHtml(r.id)}">แก้ไข</button><button data-toggle-review="${escapeHtml(r.id)}">${r.published?'ซ่อนรีวิว':'เผยแพร่'}</button><button class="danger" data-delete-review="${escapeHtml(r.id)}">ลบ</button></div></div>`).join('') : '<div class="empty-state"><p>ยังไม่มีรีวิว เพิ่มรีวิวแรกได้จากแบบฟอร์มด้านบน</p></div>';
   }
+  $('accountForm')?.addEventListener('submit',async e=>{
+    e.preventDefault();if(!db){setMessage('accountMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกรายการ',true);return;}
+    if(!currentUser){setMessage('accountMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}
+    const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');btn.disabled=true;setMessage('accountMessage','กำลังบันทึก Account…');
+    try{
+      const id=$('editAccountId').value,existing=accounts.find(a=>String(a.id)===id);
+      let image_url=existing?.image_url||'';
+      const file=$('accountImageFile').files[0];if(file)image_url=await uploadImage(file,'account-images','admin');
+      const payload={title:$('accountTitle').value.trim(),description:$('accountDescription').value.trim(),price:Number($('accountPrice').value),status:$('accountStatus').value,image_url,updated_at:new Date().toISOString()};
+      const result=id?await db.from('accounts').update(payload).eq('id',id):await db.from('accounts').insert(payload);
+      if(result.error)throw result.error;
+      resetAccountForm();await refreshAccounts();setMessage('accountMessage','บันทึกรายการเรียบร้อยแล้ว ♡');toast('บันทึก Account แล้ว ♡');
+    }catch(err){setMessage('accountMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
+  });
+  $('cancelAccountEdit')?.addEventListener('click',resetAccountForm);
+  $('accountImageFile')?.addEventListener('change',()=>previewFile($('accountImageFile'),$('accountImagePreview')));
+  $('adminAccountList')?.addEventListener('click',async e=>{
+    const edit=e.target.closest('[data-edit-account]'),toggle=e.target.closest('[data-toggle-account]'),del=e.target.closest('[data-delete-account]');
+    if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';$('accountDescription').value=a.description||'';$('accountPrice').value=a.price??'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไข Account';$('cancelAccountEdit').hidden=false;$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const {error}=await db.from('accounts').update({status:a.status==='sold'?'available':'sold',updated_at:new Date().toISOString()}).eq('id',a.id);if(error){toast('เปลี่ยนสถานะ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('อัปเดตสถานะ Account แล้ว ♡');return;}
+    if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('ลบ Account แล้ว');}
+  });
   async function refreshAdminReviews(){
     if(!db)return;
     const {data,error}=await db.from('reviews').select('*').order('created_at',{ascending:false});
@@ -165,9 +221,10 @@
   ['themeBg','themeCard','themePrimary','themeSoft','themeText'].forEach(id=>$(id)?.addEventListener('input',()=>{if($('themePreset'))$('themePreset').value='custom';updateThemePreview();}));
   $('resetTheme')?.addEventListener('click',()=>{const preset=themePresets[$('themePreset').value]||themePresets.coquette;setThemeInputs(preset);toast('แสดงตัวอย่างสีแล้ว อย่าลืมกดบันทึกนะคะ');});
   $('themeForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!db){setMessage('themeMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกธีม',true);return;}if(!currentUser){setMessage('themeMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('themeMessage','กำลังบันทึกธีม…');try{const payload={id:1,theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};const {error}=await db.from('site_settings').upsert({...settings,...payload},{onConflict:'id'});if(error)throw error;settings={...settings,...payload};applyTheme(settings);setMessage('themeMessage','บันทึกธีมเรียบร้อยแล้ว ♡');toast('บันทึกธีมเว็บไซต์แล้ว ♡');}catch(err){setMessage('themeMessage','บันทึกธีมไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}});
-  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
+  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
   $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;showLogin();closeModal();toast('ออกจากระบบแล้ว');});
   if(db){db.auth.getSession().then(async({data})=>{if(data.session){currentUser=data.session.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();}});}
   document.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===a));}));
   loadPublic();
+  loadPublicAccounts();
 })();
