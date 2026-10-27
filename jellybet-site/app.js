@@ -156,7 +156,7 @@
     reviews=data||[]; renderReviews();
   }
   $('heartButton').addEventListener('click',()=>{const b=$('heartButton');b.classList.toggle('saved');b.textContent=b.classList.contains('saved')?'♥':'♡';toast(b.classList.contains('saved')?'เพิ่มหัวใจให้ jellybet แล้ว ♡':'ยกเลิกหัวใจแล้ว');});
-  $('openAdmin').addEventListener('click',openModal); $('closeAdmin').addEventListener('click',closeModal);
+  document.querySelectorAll('#openAdmin, #openAdminIcon').forEach(button=>button.addEventListener('click',openModal)); $('closeAdmin').addEventListener('click',closeModal);
   $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))closeModal();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('adminModal').hidden)closeModal();});
   $('loginForm').addEventListener('submit',async e=>{
