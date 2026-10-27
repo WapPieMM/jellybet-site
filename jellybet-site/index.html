@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fff3f7" />
+  <meta id="siteMetaDescription" name="description" content="jellybet — เครดิตร้าน รีวิว และช่องทางติดต่อ" />
+  <title id="documentTitle">jellybet ♡ เครดิตและช่องทางติดต่อ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" id="siteBrand" href="#home" aria-label="jellybet หน้าแรก"><span class="brand-name" id="headerSiteName">jellybet</span><span class="brand-heart">♡</span></a>
+      <div class="top-actions">
+        <span class="status-pill" id="statusPill"><i></i><span>กำลังโหลดสถานะ</span></span>
+        <button class="icon-button" id="heartButton" aria-label="บันทึกเว็บไว้ในรายการโปรด" title="บันทึกเว็บไว้">♡</button>
+      </div>
+    </header>
+
+    <main id="home">
+      <section class="hero card" id="hero">
+        <div class="hero-flower flower-one">✿</div><div class="hero-flower flower-two">❀</div>
+        <p class="eyebrow">WELCOME TO MY LITTLE SHOP</p>
+        <h1 id="heroTitle">jellybet <span>♡</span></h1>
+        <p class="hero-handle" id="heroHandle">a little place made with love</p>
+        <p class="hero-copy" id="heroIntro">ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡</p>
+        <div class="hero-decoration"><span>୨୧</span><span>made with love</span><span>୨୧</span></div>
+      </section>
+
+      <section class="moodboard" id="siteMoodboard" aria-label="jellybet aesthetic">
+        <figure class="mood-photo mood-photo-bunny"><img src="assets/coquette-bunny.jpeg" alt="ตุ๊กตากระต่ายสีครีมผูกโบว์ชมพู" loading="lazy"><figcaption>soft & lovely</figcaption></figure>
+        <div class="mood-note"><span class="mood-sparkle">୨୧</span><p>a little<br>dreamy corner</p><small id="moodboardSiteName">♡ jellybet ♡</small><span class="mood-sparkle">୨୧</span></div>
+        <figure class="mood-photo mood-photo-vanity"><img src="assets/coquette-vanity.jpeg" alt="มุมโต๊ะเครื่องแป้งโทนชมพูวินเทจและไข่มุก" loading="lazy"><figcaption>pretty little things</figcaption></figure>
+      </section>
+
+      <section class="welcome-card card">
+        <span class="tiny-flower">୨୧</span>
+        <h2>hello, lovely ♡</h2>
+        <p>เช็กเครดิต รีวิว และช่องทางติดต่อร้านได้ที่นี่เลยค่ะ</p>
+      </section>
+
+      <section class="section-block" id="reviews">
+        <div class="section-heading"><div><p class="eyebrow">KIND WORDS ♡</p><h2>เครดิต & รีวิว</h2></div><span class="soft-tag" id="reviewCount">0 รีวิว</span></div>
+        <div class="stats-grid">
+          <div class="stat-card card"><span class="stat-number" id="statReviews">0</span><span class="stat-label">รีวิวจากลูกค้า</span></div>
+          <div class="stat-card card"><span class="stat-number" id="statRating">—</span><span class="stat-label">คะแนนเฉลี่ย</span></div>
+        </div>
+        <div class="review-list" id="reviewList"><div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div></div>
+        <p class="privacy-note">รีวิวใหม่จะรอให้เจ้าของร้านตรวจสอบก่อนเผยแพร่ค่ะ</p>
+        <div class="customer-review-card card"><p class="eyebrow">YOUR KIND WORDS ♡</p><h3>ฝากรีวิวให้ร้านหน่อยนะคะ</h3><p class="customer-review-help">ขอบคุณที่ใช้บริการ สามารถแนบรูปจากมือถือหรือคอมพิวเตอร์ได้เลย</p>
+          <form id="customerReviewForm" class="admin-form"><label>ชื่อที่ต้องการให้แสดง<input id="customerReviewName" required maxlength="60" placeholder="เช่น jelly customer"></label><label>ให้คะแนนร้าน<select id="customerReviewRating"><option value="5">5 ดาว — ประทับใจมาก</option><option value="4">4 ดาว — ดีมาก</option><option value="3">3 ดาว — ดี</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="customerReviewText" rows="3" required maxlength="1000" placeholder="เขียนความประทับใจของคุณ..."></textarea></label><label>แนบรูปภาพ (ไม่บังคับ)<input id="customerReviewImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="customerReviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับ JPG, PNG, WEBP, GIF ขนาดไม่เกิน 5 MB</small><button class="primary-button" type="submit">ส่งรีวิวให้ร้านตรวจสอบ ♡</button><p class="form-message" id="customerReviewMessage" role="status"></p></form>
+        </div>
+      </section>
+
+      <section class="section-block" id="contact">
+        <div class="section-heading"><div><p class="eyebrow">LET'S KEEP IN TOUCH</p><h2>ช่องทางติดต่อ</h2></div><span class="heading-flower">✿</span></div>
+        <div class="contact-list card" id="contactList">
+          <div class="contact-row"><span class="contact-icon">♡</span><div class="contact-copy"><strong>ช่องทางติดต่อ</strong><small>กำลังโหลดข้อมูล…</small></div></div>
+        </div>
+        <p class="contact-footnote">ติดต่อร้านผ่านช่องทางด้านบนได้เลยนะคะ ♡</p>
+      </section>
+
+      <section class="notice-card card"><span class="notice-icon">✧</span><div><strong>ขอบคุณที่สนับสนุน <span id="noticeSiteName">jellybet</span></strong><p>โปรดตรวจสอบชื่อบัญชีและรายละเอียดก่อนชำระเงินทุกครั้ง หากมีข้อสงสัยสามารถทักร้านได้โดยตรงค่ะ</p></div></section>
+    </main>
+
+    <footer><span><span id="footerSiteName">jellybet</span> ♡</span><p>little things, lovely people.</p><button class="admin-link" id="openAdmin">สำหรับเจ้าของร้าน</button></footer>
+  </div>
+
+  <nav class="bottom-nav" aria-label="เมนูหลัก">
+    <a class="nav-item active" href="#home"><span>✿</span><small>หน้าหลัก</small></a>
+    <a class="nav-item" href="#reviews"><span>♡</span><small>เครดิต</small></a>
+    <a class="nav-item" href="#contact"><span>✉</span><small>ติดต่อ</small></a>
+  </nav>
+
+  <div class="modal-backdrop" id="adminModal" hidden>
+    <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+      <button class="modal-close" id="closeAdmin" aria-label="ปิด">×</button>
+      <div id="adminLoginView">
+        <p class="eyebrow">OWNER ONLY ♡</p><h2 id="adminTitle">หลังบ้านร้าน jellybet</h2>
+        <p class="admin-description">เข้าสู่ระบบเพื่อแก้ไขข้อมูลร้านและจัดการรีวิว</p>
+        <form id="loginForm" class="admin-form"><label>อีเมล<input type="email" id="adminEmail" autocomplete="username" required placeholder="อีเมลแอดมิน"></label><label>รหัสผ่าน<input type="password" id="adminPassword" autocomplete="current-password" required placeholder="รหัสผ่าน"></label><button class="primary-button" type="submit">เข้าสู่ระบบ</button><p class="form-message" id="loginMessage" role="status"></p></form>
+        <p class="setup-hint" id="setupHint">ต้องตั้งค่า Supabase ในไฟล์ config.js ก่อนใช้งานระบบหลังบ้าน</p>
+      </div>
+      <div id="adminDashboard" hidden>
+        <p class="eyebrow" id="adminEyebrow">JELLYBET CONTROL ROOM</p><h2>จัดการหน้าร้าน <span id="adminSiteName">jellybet</span> ♡</h2>
+        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
+        <div id="settingsTab">
+          <form id="settingsForm" class="admin-form">
+            <label>ชื่อร้าน<input id="editShopName" required maxlength="60"></label>
+            <label>ข้อความแนะนำร้าน<textarea id="editIntro" rows="3" maxlength="500"></textarea></label>
+            <label>ชื่อบัญชี/แฮนเดิลที่แสดง<input id="editHandle" maxlength="100" placeholder="เช่น @jellybet"></label>
+            <label>รูปโปรไฟล์ร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopAvatarFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopAvatarPreview" alt="ตัวอย่างรูปโปรไฟล์" hidden></div>
+            <label>รูปปก/ภาพพื้นหลังร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopCoverFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopCoverPreview" alt="ตัวอย่างรูปปก" hidden></div>
+            <label>สถานะร้าน<select id="editStatus"><option value="open">เปิดให้บริการ</option><option value="closed">ปิดให้บริการ</option></select></label>
+            <label>LINE (ใส่ URL หรือชื่อบัญชี)<input id="editLine" placeholder="https://line.me/... หรือ @lineid"></label>
+            <label>X / Twitter (ใส่ URL หรือชื่อบัญชี)<input id="editX" placeholder="https://x.com/... หรือ @username"></label>
+            <label>Instagram (ใส่ URL หรือชื่อบัญชี)<input id="editInstagram" placeholder="https://instagram.com/... หรือ @username"></label>
+            <label>Facebook (ใส่ URL หรือชื่อเพจ)<input id="editFacebook" placeholder="ลิงก์เพจ Facebook"></label>
+            <button class="primary-button" type="submit">บันทึกข้อมูลร้าน</button><p class="form-message" id="settingsMessage" role="status"></p>
+          </form>
+        </div>
+        <div id="themeAdminTab" hidden>
+          <form id="themeForm" class="admin-form">
+            <p class="theme-help">เลือกพาเลตต์สีหรือกำหนดสีเองได้ การตั้งค่าจะถูกบันทึกไว้ในฐานข้อมูลและใช้กับผู้เข้าชมทุกคน</p>
+            <label>ธีมสำเร็จรูป<select id="themePreset"><option value="coquette">Coquette — ครีม ชมพูหม่น</option><option value="pastel">Pastel Pink — ชมพูพาสเทล</option><option value="rose">Rose Vintage — ชมพูวินเทจ</option><option value="cream">Vanilla Cream — ครีมอุ่น</option><option value="custom">กำหนดสีเอง</option></select></label>
+            <div class="theme-color-grid">
+              <label>สีพื้นหลัง<input id="themeBg" type="color" value="#fffaf4"></label>
+              <label>สีการ์ด<input id="themeCard" type="color" value="#fffdfb"></label>
+              <label>สีหลัก<input id="themePrimary" type="color" value="#d994ad"></label>
+              <label>สีอ่อน<input id="themeSoft" type="color" value="#fff0f5"></label>
+              <label>สีตัวอักษร<input id="themeText" type="color" value="#59434b"></label>
+            </div>
+            <div class="theme-preview" id="themePreview"><span>୨୧ jellybet ♡</span><small>ตัวอย่างสีเว็บไซต์ของคุณ</small><button type="button" tabindex="-1">ปุ่มตัวอย่าง</button></div>
+            <button class="primary-button" type="submit">บันทึกธีมเว็บไซต์ ♡</button><button class="secondary-button" type="button" id="resetTheme">คืนค่าสีธีมที่เลือก</button><p class="form-message" id="themeMessage" role="status"></p>
+          </form>
+        </div>
+        <div id="reviewsAdminTab" hidden>
+          <form id="reviewForm" class="admin-form review-editor"><h3 id="reviewFormTitle">เพิ่มรีวิวใหม่</h3><input type="hidden" id="editReviewId"><label>ชื่อลูกค้า/ชื่อที่ใช้แสดง<input id="reviewCustomer" required maxlength="60" placeholder="เช่น ลูกค้าท่านหนึ่ง"></label><label>คะแนน<select id="reviewRating"><option value="5">5 ดาว</option><option value="4">4 ดาว</option><option value="3">3 ดาว</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="reviewText" rows="3" required maxlength="1000" placeholder="ข้อความรีวิวที่ได้รับอนุญาตให้เผยแพร่"></textarea></label><label>อัปโหลดรูปประกอบรีวิวจากเครื่อง/มือถือ (ถ้ามี)<input type="file" id="reviewImageFile" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="reviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับรูปไม่เกิน 5 MB</small><label class="checkbox-label"><input type="checkbox" id="reviewPublished" checked> แสดงรีวิวบนหน้าเว็บ</label><button class="primary-button" type="submit">บันทึกรีวิว</button><button class="secondary-button" type="button" id="cancelReviewEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="reviewMessage" role="status"></p></form>
+          <div class="admin-review-list" id="adminReviewList"></div>
+        </div>
+        <button class="secondary-button logout-button" id="logoutButton">ออกจากระบบ</button>
+      </div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
