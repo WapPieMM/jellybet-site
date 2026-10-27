@@ -68,3 +68,10 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .admin-tabs{flex-wrap:wrap}
 @media(min-width:520px){.account-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.account-card-body{padding:14px}.account-card h3{font-size:13px}}
 @media(max-width:380px){.account-grid{grid-template-columns:1fr}.account-image,.account-image-placeholder{aspect-ratio:16/9}.account-card-body{padding:14px}.account-card-bottom{flex-direction:row;align-items:center;justify-content:space-between}}
+
+
+/* Keep the owner shortcut visible beside the shop status on mobile */
+.admin-icon-button{flex:0 0 39px;display:grid;place-items:center;font-size:18px;color:#a87389;background:linear-gradient(145deg,#fff,#fff3f7);box-shadow:0 3px 10px rgba(138,91,111,.06)}
+.admin-icon-button:focus-visible{outline:2px solid #d994ad;outline-offset:2px}
+.top-actions{gap:7px}
+@media(max-width:370px){.top-actions{gap:5px}.admin-icon-button,.icon-button{width:35px;height:35px;flex-basis:35px}.status-pill{padding:7px 8px}}
