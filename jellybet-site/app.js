@@ -81,7 +81,7 @@
   }
   async function loadPublicAccounts(){
     if(!db){accounts=[];renderAccounts();return;}
-    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();}
+    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();renderAdminAccounts();}
     catch(err){console.warn('Account listing unavailable until database schema is applied:',err);accounts=[];renderAccounts();}
   }
   function renderAdminAccounts(){
