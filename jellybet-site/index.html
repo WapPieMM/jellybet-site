@@ -141,6 +141,7 @@
             <input type="hidden" id="editAccountId">
             <label>ชื่อรายการ / ชื่อ Account<input id="accountTitle" required maxlength="100" placeholder="เช่น Account เลเวลสูง"></label>
             <label>รายละเอียด<textarea id="accountDescription" rows="3" maxlength="1500" placeholder="รายละเอียด จุดเด่น สิ่งที่ลูกค้าจะได้รับ"></textarea></label>
+            <label>รายละเอียดการผ่อน (แสดงในหน้ารายละเอียดไอดี)<textarea id="accountInstallmentDetails" rows="3" maxlength="2000" placeholder="เช่น มัดจำ 1,000 บาท ผ่อนเดือนละ 1,000 บาท จำนวน 3 เดือน"></textarea></label>
             <label>ราคา (บาท)<input id="accountPrice" type="number" required min="0" max="999999999" step="0.01" placeholder="เช่น 450"></label>
             <label>สถานะรายการ<select id="accountStatus"><option value="available">พร้อมขาย</option><option value="installment">ติดผ่อน</option><option value="sold">ขายแล้ว</option></select></label>
             <label>รูปภาพ Account (จากมือถือ/คอมพิวเตอร์)<input id="accountImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
@@ -153,9 +154,9 @@
           <div class="admin-account-list" id="adminAccountList"></div>
         </div>
 
-<div id="installmentAdminTab" hidden><div class="admin-form"><h3>จัดการรายละเอียดการผ่อน ♡</h3><p class="admin-description">เลือกรายการที่ติดผ่อน แล้วกด “แก้ไขรายละเอียด” เพื่อแก้ราคา เงื่อนไข และกำหนดการผ่อนในช่องรายละเอียด Account เดิมได้เลยค่ะ</p><div id="installmentAccountList" class="admin-account-list"><p>กำลังโหลดรายการ…</p></div></div></div>
+<div id="installmentAdminTab" hidden><div class="admin-form"><h3>รายละเอียดการผ่อน Account ♡</h3><p class="admin-description">เลือกไอดีที่มีสถานะ “พร้อมขาย” เพื่อเพิ่มเงื่อนไขการผ่อน โดยไม่ต้องเปลี่ยนสถานะไอดี รายละเอียดจะแสดงในหน้ารายละเอียดของไอดีนั้น</p><div id="installmentAccountList" class="admin-account-list"><p>กำลังโหลดรายการ…</p></div></div></div>
 
-<div id="reviewsAdminTab" hidden>
+        <div id="reviewsAdminTab" hidden>
           <form id="reviewForm" class="admin-form review-editor"><h3 id="reviewFormTitle">เพิ่มรีวิวใหม่</h3><input type="hidden" id="editReviewId"><label>ชื่อลูกค้า/ชื่อที่ใช้แสดง<input id="reviewCustomer" required maxlength="60" placeholder="เช่น ลูกค้าท่านหนึ่ง"></label><label>คะแนน<select id="reviewRating"><option value="5">5 ดาว</option><option value="4">4 ดาว</option><option value="3">3 ดาว</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="reviewText" rows="3" required maxlength="1000" placeholder="ข้อความรีวิวที่ได้รับอนุญาตให้เผยแพร่"></textarea></label><label>อัปโหลดรูปประกอบรีวิวจากเครื่อง/มือถือ (ถ้ามี)<input type="file" id="reviewImageFile" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="reviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับรูปไม่เกิน 5 MB</small><label class="checkbox-label"><input type="checkbox" id="reviewPublished" checked> แสดงรีวิวบนหน้าเว็บ</label><button class="primary-button" type="submit">บันทึกรีวิว</button><button class="secondary-button" type="button" id="cancelReviewEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="reviewMessage" role="status"></p></form>
           <div class="admin-review-list" id="adminReviewList"></div>
         </div>
