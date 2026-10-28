@@ -67,16 +67,42 @@
   }
   function renderAccounts(){
     const grid=$('accountGrid'); if(!grid)return;
+    const detail=$('accountDetailView');
+    if(detail){detail.hidden=true;detail.innerHTML='';}
+    grid.hidden=false;
     const available=accounts.filter(a=>a.status==='available');
     $('accountCount').textContent=`${available.length} พร้อมขาย`;
-    const contactHref=linkFor('line',settings.line)||'#contact';
     grid.innerHTML=accounts.length ? accounts.map(a=>{
       const sold=a.status==='sold';
       const image=a.image_url ? `<img class="account-image" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}" loading="lazy">` : '<div class="account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
-      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${sold?'sold':'available'}">${sold?'ขายแล้ว':'พร้อมขาย'}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description">${escapeHtml(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ')}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong>${sold?'<span class="sold-note">รายการนี้ขายแล้ว ♡</span>':`<a class="account-contact-button" href="${escapeHtml(contactHref)}" ${contactHref==='#contact'?'':'target="_blank" rel="noopener noreferrer"'}>สนใจรายการนี้ ↗</a>`}</div></div></article>`;
+      const shortDescription=(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ').trim();
+      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${sold?'sold':'available'}">${sold?'ขายแล้ว':'พร้อมขาย'}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description account-description-preview">${escapeHtml(shortDescription)}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong><button class="account-contact-button" type="button" data-view-account="${escapeHtml(a.id)}">ดูเพิ่มเติม ↗</button></div></div></article>`;
     }).join('') : '<div class="empty-state card account-empty"><span>୨୧</span><p>ยังไม่มี Account ลงขายในตอนนี้</p><small>แวะกลับมาดูรายการใหม่ได้อีกนะคะ ♡</small></div>';
     renderAdminAccounts();
   }
+  function showAccountDetail(id){
+    const account=accounts.find(a=>String(a.id)===String(id));
+    if(!account)return;
+    const grid=$('accountGrid'), detail=$('accountDetailView');
+    if(!grid||!detail)return;
+    const sold=account.status==='sold';
+    const contactHref=linkFor('line',settings.line)||'#contact';
+    const image=account.image_url ? `<img class="account-detail-image" src="${escapeHtml(account.image_url)}" alt="${escapeHtml(account.title||'Account')}" loading="lazy">` : '<div class="account-detail-image account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
+    detail.innerHTML=`<button class="account-back-button" type="button" data-back-accounts>← กลับไปดูรายการทั้งหมด</button><article class="account-detail-card card"><div class="account-detail-media">${image}</div><div class="account-detail-content"><span class="account-status ${sold?'sold':'available'}">${sold?'ขายแล้ว':'พร้อมขาย'}</span><h2>${escapeHtml(account.title||'Account')}</h2><p class="account-detail-description">${escapeHtml(account.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ')}</p><div class="account-detail-footer"><strong class="account-price">${Number(account.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong>${sold?'<span class="sold-note">รายการนี้ขายแล้ว ♡</span>':`<a class="account-contact-button" href="${escapeHtml(contactHref)}" ${contactHref==='#contact'?'':'target="_blank" rel="noopener noreferrer"'}>สนใจรายการนี้ ↗</a>`}</div></div></article>`;
+    grid.hidden=true;
+    detail.hidden=false;
+    detail.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  $('accountGrid')?.addEventListener('click',e=>{
+    const button=e.target.closest('[data-view-account]');
+    if(button)showAccountDetail(button.dataset.viewAccount);
+  });
+  $('accountDetailView')?.addEventListener('click',e=>{
+    if(!e.target.closest('[data-back-accounts]'))return;
+    $('accountDetailView').hidden=true;
+    $('accountGrid').hidden=false;
+    $('accounts').scrollIntoView({behavior:'smooth',block:'start'});
+  });
   async function loadPublicAccounts(){
     if(!db){accounts=[];renderAccounts();return;}
     try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();}
