@@ -1,15 +1,15 @@
-function formatAccountDescription(value){
-  return esc(value).split(/\n/).map(line=>{
-    const match=line.match(/^\s*\*(.+?)\*\s*$/);
-    if(match)return '<div class="account-highlight-line"><span>'+match[1]+'</span></div>';
-    return line||'';
-  }).join('<br>');
-}
 (() => {
  const $=id=>document.getElementById(id), cfg=window.JELLYBET_CONFIG||{};
  const configured=!!(window.supabase&&cfg.supabaseUrl&&cfg.supabaseAnonKey&&!cfg.supabaseUrl.includes('YOUR-PROJECT')&&!cfg.supabaseAnonKey.includes('YOUR_SUPABASE'));
  const db=configured?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
  const esc=(s='')=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function formatAccountDescription(value){
+  return esc(value).split(/\n/).map(line=>{
+   const match=line.match(/^\s*\*(.+?)\*\s*$/);
+   if(match)return '<div class="account-highlight-line"><span>'+match[1]+'</span></div>';
+   return line||'';
+  }).join('<br>');
+ }
  const lineUrl=raw=>{const v=(raw||'').trim();if(!v)return '';if(/^https?:\/\//i.test(v))return v;return 'https://line.me/R/ti/p/~'+encodeURIComponent(v.replace(/^@/,''));};
  async function load(){
   const content=$('accountPageContent'), id=decodeURIComponent(location.pathname.replace(/\/$/,'').split('/').pop()||'');
