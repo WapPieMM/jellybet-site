@@ -67,13 +67,15 @@
   }
   function renderAccounts(){
     const grid=$('accountGrid'); if(!grid)return;
-    const available=accounts.filter(a=>a.status==='available');
-    $('accountCount').textContent=`${available.length} พร้อมขาย`;
+    const available=accounts.filter(a=>a.status==='available'||a.status==='installment');
+    $('accountCount').textContent=`${available.length} พร้อมขาย/ติดผ่อน`;
     grid.innerHTML=accounts.length ? accounts.map(a=>{
-      const sold=a.status==='sold';
+      const sold=a.status==='sold', installment=a.status==='installment';
+      const statusLabel=sold?'ขายแล้ว':installment?'ติดผ่อน':'พร้อมขาย';
+      const statusClass=sold?'sold':installment?'installment':'available';
       const image=a.image_url ? `<img class="account-image" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}" loading="lazy">` : '<div class="account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
       const shortDescription=(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ').trim();
-      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${sold?'sold':'available'}">${sold?'ขายแล้ว':'พร้อมขาย'}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description account-description-preview">${escapeHtml(shortDescription)}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong><a class="account-contact-button" href="/account/${encodeURIComponent(a.id)}">ดูเพิ่มเติม ↗</a></div></div></article>`;
+      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${statusClass}">${statusLabel}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description account-description-preview">${escapeHtml(shortDescription)}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong><a class="account-contact-button" href="/account/${encodeURIComponent(a.id)}">ดูเพิ่มเติม ↗</a></div></div></article>`;
     }).join('') : '<div class="empty-state card account-empty"><span>୨୧</span><p>ยังไม่มี Account ลงขายในตอนนี้</p><small>แวะกลับมาดูรายการใหม่ได้อีกนะคะ ♡</small></div>';
     renderAdminAccounts();
   }
@@ -85,7 +87,7 @@
   function renderAdminAccounts(){
     const list=$('adminAccountList');if(!list)return;
     if(!currentUser){list.innerHTML='';return;}
-    list.innerHTML=accounts.length?accounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ${a.status==='sold'?'ขายแล้ว':'พร้อมขาย'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">${a.status==='sold'?'ตั้งเป็นพร้อมขาย':'ตั้งเป็นขายแล้ว'}</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
+    list.innerHTML=accounts.length?accounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
   }
   async function refreshAccounts(){
     if(!db)return;
@@ -95,7 +97,7 @@
   }
   function resetAccountForm(){
     $('accountForm').reset();$('editAccountId').value='';$('accountStatus').value='available';
-    $('accountFormTitle').textContent='เพิ่ม Account พร้อมขาย';$('cancelAccountEdit').hidden=true;
+    $('accountFormTitle').textContent='เพิ่ม Account';$('cancelAccountEdit').hidden=true;
     const img=$('accountImagePreview');if(img){img.hidden=true;img.removeAttribute('src');}
     setMessage('accountMessage','');
   }
@@ -146,7 +148,7 @@
   $('adminAccountList')?.addEventListener('click',async e=>{
     const edit=e.target.closest('[data-edit-account]'),toggle=e.target.closest('[data-toggle-account]'),del=e.target.closest('[data-delete-account]');
     if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';$('accountDescription').value=a.description||'';$('accountPrice').value=a.price??'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไข Account';$('cancelAccountEdit').hidden=false;$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
-    if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const {error}=await db.from('accounts').update({status:a.status==='sold'?'available':'sold',updated_at:new Date().toISOString()}).eq('id',a.id);if(error){toast('เปลี่ยนสถานะ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('อัปเดตสถานะ Account แล้ว ♡');return;}
+    if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const nextStatus=a.status==='available'?'installment':a.status==='installment'?'sold':'available';const {error}=await db.from('accounts').update({status:nextStatus,updated_at:new Date().toISOString()}).eq('id',a.id);if(error){toast('เปลี่ยนสถานะ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('อัปเดตสถานะ Account แล้ว ♡');return;}
     if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('ลบ Account แล้ว');}
   });
   async function refreshAdminReviews(){

@@ -98,3 +98,5 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .account-detail-footer{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%;margin-top:8px}
 .account-detail-footer .account-contact-button{border:0;width:100%;font:inherit;font-size:12px;cursor:pointer}
 @media(min-width:680px){.account-detail-card{grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr)}.account-detail-image{height:100%;min-height:360px;max-height:680px;aspect-ratio:auto}.account-detail-content{padding:24px}.account-detail-footer{margin-top:auto}}
+
+.account-status.installment{background:#fff0d9;color:#9a6b27}
