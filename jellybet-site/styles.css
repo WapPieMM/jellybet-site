@@ -110,3 +110,35 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .installment-admin-note{font-size:12px;color:var(--muted);line-height:1.8}
 
 .account-installment-details{margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:#fff7fa}.account-installment-details h2{font-size:15px;margin:0 0 8px;color:var(--ink)}.account-installment-details p{font-size:13px;line-height:1.9;white-space:normal;margin:0;color:var(--muted)}
+
+/* Sweet pink background for account detail information */
+.account-detail-content{
+  background:linear-gradient(155deg,#fff8fb 0%,#fff0f6 52%,#fdeaf2 100%);
+  position:relative;
+}
+.account-detail-content::before{
+  content:"♡ ୨୧";
+  position:absolute;
+  top:14px;
+  right:18px;
+  color:rgba(190,119,151,.18);
+  font-size:18px;
+  letter-spacing:5px;
+  pointer-events:none;
+}
+.account-detail-content .account-detail-description{
+  padding:14px 15px;
+  border:1px solid rgba(201,143,168,.28);
+  border-radius:15px;
+  background:rgba(255,255,255,.72);
+}
+.account-detail-content .account-installment-details{
+  width:100%;
+  box-sizing:border-box;
+  background:linear-gradient(135deg,#fffafd,#ffeef5);
+  border-color:#f0d4e0;
+  box-shadow:0 5px 16px rgba(177,111,143,.07);
+}
+.account-detail-content .account-price{
+  color:#ad6687;
+}
