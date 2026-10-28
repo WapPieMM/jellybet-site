@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/account/:id", "destination": "/account.html?id=:id" }
+  ]
+}
