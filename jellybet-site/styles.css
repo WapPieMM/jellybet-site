@@ -142,3 +142,8 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .account-detail-content .account-price{
   color:#ad6687;
 }
+
+
+/* Pink highlight for important account-detail headings wrapped in *asterisks* */
+.account-detail-description .account-highlight-line{display:block;margin:12px 0 8px;line-height:1.7}
+.account-detail-description .account-highlight-line span{display:inline-block;max-width:100%;box-sizing:border-box;padding:7px 13px;border:1px solid #f1cbdc;border-radius:10px;background:linear-gradient(110deg,#ffe3ef 0%,#fff0f6 55%,#ffeaf3 100%);color:#a65378;font-weight:700;box-shadow:0 3px 10px rgba(190,119,151,.10);overflow-wrap:anywhere}
