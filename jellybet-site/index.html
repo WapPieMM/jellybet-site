@@ -104,7 +104,7 @@
       </div>
       <div id="adminDashboard" hidden>
         <p class="eyebrow" id="adminEyebrow">JELLYBET CONTROL ROOM</p><h2>จัดการหน้าร้าน <span id="adminSiteName">jellybet</span> ♡</h2>
-        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="accountsAdmin">จัดการ Account</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
+        <div class="admin-tabs"><button class="tab-button selected" data-tab="settings">ข้อมูลร้าน</button><button class="tab-button" data-tab="themeAdmin">ปรับแต่งธีม</button><button class="tab-button" data-tab="accountsAdmin">จัดการ Account</button><button class="tab-button" data-tab="installmentAdmin">รายละเอียดการผ่อน</button><button class="tab-button" data-tab="reviewsAdmin">จัดการรีวิว</button></div>
         <div id="settingsTab">
           <form id="settingsForm" class="admin-form">
             <label>ชื่อร้าน<input id="editShopName" required maxlength="60"></label>
@@ -152,6 +152,8 @@
           </form>
           <div class="admin-account-list" id="adminAccountList"></div>
         </div>
+
+<div id="installmentAdminTab" hidden><div class="admin-form"><h3>จัดการรายละเอียดการผ่อน ♡</h3><p class="admin-description">เลือกรายการที่ติดผ่อน แล้วกด “แก้ไขรายละเอียด” เพื่อแก้ราคา เงื่อนไข และกำหนดการผ่อนในช่องรายละเอียด Account เดิมได้เลยค่ะ</p><div id="installmentAccountList" class="admin-account-list"><p>กำลังโหลดรายการ…</p></div></div></div>
 
 <div id="reviewsAdminTab" hidden>
           <form id="reviewForm" class="admin-form review-editor"><h3 id="reviewFormTitle">เพิ่มรีวิวใหม่</h3><input type="hidden" id="editReviewId"><label>ชื่อลูกค้า/ชื่อที่ใช้แสดง<input id="reviewCustomer" required maxlength="60" placeholder="เช่น ลูกค้าท่านหนึ่ง"></label><label>คะแนน<select id="reviewRating"><option value="5">5 ดาว</option><option value="4">4 ดาว</option><option value="3">3 ดาว</option><option value="2">2 ดาว</option><option value="1">1 ดาว</option></select></label><label>ข้อความรีวิว<textarea id="reviewText" rows="3" required maxlength="1000" placeholder="ข้อความรีวิวที่ได้รับอนุญาตให้เผยแพร่"></textarea></label><label>อัปโหลดรูปประกอบรีวิวจากเครื่อง/มือถือ (ถ้ามี)<input type="file" id="reviewImageFile" accept="image/jpeg,image/png,image/webp,image/gif"></label><div class="image-preview-row"><img id="reviewImagePreview" alt="ตัวอย่างรูปรีวิว" hidden></div><small class="upload-note">รองรับรูปไม่เกิน 5 MB</small><label class="checkbox-label"><input type="checkbox" id="reviewPublished" checked> แสดงรีวิวบนหน้าเว็บ</label><button class="primary-button" type="submit">บันทึกรีวิว</button><button class="secondary-button" type="button" id="cancelReviewEdit" hidden>ยกเลิกการแก้ไข</button><p class="form-message" id="reviewMessage" role="status"></p></form>
