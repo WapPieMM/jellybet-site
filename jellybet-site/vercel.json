@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/account/:id", "destination": "/account.html?id=:id" }
+    {
+      "source": "/accounts",
+      "destination": "/accounts.html"
+    },
+    {
+      "source": "/account/:id",
+      "destination": "/account.html?id=:id"
+    }
   ]
 }
