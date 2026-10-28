@@ -81,13 +81,14 @@
   }
   async function loadPublicAccounts(){
     if(!db){accounts=[];renderAccounts();return;}
-    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();renderAdminAccounts();}
+    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();renderAdminAccounts();renderAdminAccounts();}
     catch(err){console.warn('Account listing unavailable until database schema is applied:',err);accounts=[];renderAccounts();}
   }
   function renderAdminAccounts(){
     const list=$('adminAccountList');if(!list)return;
     if(!currentUser){list.innerHTML='';return;}
     list.innerHTML=accounts.length?accounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
+    const installmentList=$('installmentAccountList');if(installmentList){const installmentAccounts=accounts.filter(a=>a.status==='installment');installmentList.innerHTML=installmentAccounts.length?installmentAccounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ติดผ่อน</p></div></div><p>${escapeHtml(a.description||'ยังไม่ได้เพิ่มรายละเอียดการผ่อน')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไขรายละเอียด</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account ที่มีสถานะติดผ่อนค่ะ ♡</p><small>เปลี่ยนสถานะ Account เป็น “ติดผ่อน” ในเมนูจัดการ Account เพื่อให้รายการแสดงที่นี่</small></div>';}
   }
   async function refreshAccounts(){
     if(!db)return;
@@ -145,12 +146,12 @@
   });
   $('cancelAccountEdit')?.addEventListener('click',resetAccountForm);
   $('accountImageFile')?.addEventListener('change',()=>previewFile($('accountImageFile'),$('accountImagePreview')));
-  $('adminAccountList')?.addEventListener('click',async e=>{
+  ['adminAccountList','installmentAccountList'].forEach(listId=>$(listId)?.addEventListener('click',async e=>{
     const edit=e.target.closest('[data-edit-account]'),toggle=e.target.closest('[data-toggle-account]'),del=e.target.closest('[data-delete-account]');
     if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';$('accountDescription').value=a.description||'';$('accountPrice').value=a.price??'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไข Account';$('cancelAccountEdit').hidden=false;$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
     if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const nextStatus=a.status==='available'?'installment':a.status==='installment'?'sold':'available';const {error}=await db.from('accounts').update({status:nextStatus,updated_at:new Date().toISOString()}).eq('id',a.id);if(error){toast('เปลี่ยนสถานะ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('อัปเดตสถานะ Account แล้ว ♡');return;}
     if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('ลบ Account แล้ว');}
-  });
+  }));
   async function refreshAdminReviews(){
     if(!db)return;
     const {data,error}=await db.from('reviews').select('*').order('created_at',{ascending:false});
@@ -223,7 +224,7 @@
   ['themeBg','themeCard','themePrimary','themeSoft','themeText'].forEach(id=>$(id)?.addEventListener('input',()=>{if($('themePreset'))$('themePreset').value='custom';updateThemePreview();}));
   $('resetTheme')?.addEventListener('click',()=>{const preset=themePresets[$('themePreset').value]||themePresets.coquette;setThemeInputs(preset);toast('แสดงตัวอย่างสีแล้ว อย่าลืมกดบันทึกนะคะ');});
   $('themeForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!db){setMessage('themeMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกธีม',true);return;}if(!currentUser){setMessage('themeMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('themeMessage','กำลังบันทึกธีม…');try{const payload={id:1,theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};const {error}=await db.from('site_settings').upsert({...settings,...payload},{onConflict:'id'});if(error)throw error;settings={...settings,...payload};applyTheme(settings);setMessage('themeMessage','บันทึกธีมเรียบร้อยแล้ว ♡');toast('บันทึกธีมเว็บไซต์แล้ว ♡');}catch(err){setMessage('themeMessage','บันทึกธีมไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}});
-  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
+  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';$('installmentAdminTab').hidden=btn.dataset.tab!=='installmentAdmin';if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin'||btn.dataset.tab==='installmentAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
   $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;showLogin();closeModal();toast('ออกจากระบบแล้ว');});
   if(db){db.auth.getSession().then(async({data})=>{if(data.session){currentUser=data.session.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();}});}
   document.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===a));}));
