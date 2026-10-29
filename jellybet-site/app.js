@@ -3,7 +3,7 @@
   const cfg = window.JELLYBET_CONFIG || {};
   const configured = !!(window.supabase && cfg.supabaseUrl && cfg.supabaseAnonKey && !cfg.supabaseUrl.includes('YOUR-PROJECT') && !cfg.supabaseAnonKey.includes('YOUR_SUPABASE'));
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
-  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'' };
+  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'', mood_bunny_url:'', mood_vanity_url:'' };
   let settings = { ...defaultSettings }, reviews = [], accounts = [], musicTracks = [], currentUser = null;
   const contactDefs = [
     {key:'line',label:'LINE',icon:'♡',hint:'พูดคุยและสอบถามข้อมูล'},
@@ -42,6 +42,8 @@
     const headerName = $('headerSiteName'); if (headerName) headerName.textContent = siteName;
     const brand = $('siteBrand'); if (brand) brand.setAttribute('aria-label', `${siteName} หน้าแรก`);
     const moodboard = $('siteMoodboard'); if (moodboard) moodboard.setAttribute('aria-label', `${siteName} aesthetic`);
+    const bunnyImage=$('moodBunnyImage');if(bunnyImage&&settings.mood_bunny_url)bunnyImage.src=settings.mood_bunny_url;
+    const vanityImage=$('moodVanityImage');if(vanityImage&&settings.mood_vanity_url)vanityImage.src=settings.mood_vanity_url;
     const moodName = $('moodboardSiteName'); if (moodName) moodName.textContent = `♡ ${siteName} ♡`;
     const noticeName = $('noticeSiteName'); if (noticeName) noticeName.textContent = siteName;
     const footerName = $('footerSiteName'); if (footerName) footerName.textContent = siteName;
@@ -55,6 +57,8 @@
     $('heroIntro').textContent = settings.intro || defaultSettings.intro;
     const hero=$('hero'); if(hero){hero.style.backgroundImage=settings.cover_url ? `linear-gradient(90deg,rgba(255,250,248,.93),rgba(255,245,249,.78)),url(\"${settings.cover_url}\")` : ''; hero.style.backgroundSize='cover';hero.style.backgroundPosition='center';}
     const avatar=$('shopAvatarPreview'); if(avatar){avatar.src=settings.avatar_url||'';avatar.hidden=!settings.avatar_url;} const cover=$('shopCoverPreview'); if(cover){cover.src=settings.cover_url||'';cover.hidden=!settings.cover_url;}
+    const bunnyPreview=$('moodBunnyPreview');if(bunnyPreview){bunnyPreview.src=settings.mood_bunny_url||$('moodBunnyImage')?.src||'';bunnyPreview.hidden=!settings.mood_bunny_url;}
+    const vanityPreview=$('moodVanityPreview');if(vanityPreview){vanityPreview.src=settings.mood_vanity_url||$('moodVanityImage')?.src||'';vanityPreview.hidden=!settings.mood_vanity_url;}
     const pill=$('statusPill'); pill.classList.toggle('is-open',settings.status==='open'); pill.classList.toggle('is-closed',settings.status!=='open');
     pill.lastElementChild.textContent = settings.status==='open' ? 'เปิดให้บริการ' : 'ปิดให้บริการ';
     $('contactList').innerHTML = contactDefs.map(c=>{
@@ -202,11 +206,13 @@
   $('settingsForm').addEventListener('submit',async e=>{
     e.preventDefault();if(!db)return;const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('settingsMessage','กำลังบันทึก…');
     try{
-    let avatar_url=settings.avatar_url||'', cover_url=settings.cover_url||'';
+    let avatar_url=settings.avatar_url||'', cover_url=settings.cover_url||'', mood_bunny_url=settings.mood_bunny_url||'', mood_vanity_url=settings.mood_vanity_url||'';
     if($('shopAvatarFile').files[0]) avatar_url=await uploadImage($('shopAvatarFile').files[0],'shop-images','admin');
     if($('shopCoverFile').files[0]) cover_url=await uploadImage($('shopCoverFile').files[0],'shop-images','admin');
-    const payload={id:1,avatar_url,cover_url,account_entry_image_1:$('accountEntryImage1')?.value||'',account_entry_image_2:$('accountEntryImage2')?.value||'',shop_name:$('editShopName').value.trim(),intro:$('editIntro').value.trim(),handle:$('editHandle').value.trim(),status:$('editStatus').value,line:$('editLine').value.trim(),x:$('editX').value.trim(),instagram:$('editInstagram').value.trim(),facebook:$('editFacebook').value.trim(),theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};
-    const {error}=await db.from('site_settings').upsert(payload,{onConflict:'id'});if(error)throw error;settings={...settings,...payload};renderSettings();$('shopAvatarFile').value='';$('shopCoverFile').value='';setMessage('settingsMessage','บันทึกข้อมูลเรียบร้อยแล้ว ♡');toast('บันทึกข้อมูลร้านแล้ว ♡');}
+    if($('moodBunnyFile').files[0]) mood_bunny_url=await uploadImage($('moodBunnyFile').files[0],'shop-images','admin/moodboard');
+    if($('moodVanityFile').files[0]) mood_vanity_url=await uploadImage($('moodVanityFile').files[0],'shop-images','admin/moodboard');
+    const payload={id:1,avatar_url,cover_url,mood_bunny_url,mood_vanity_url,account_entry_image_1:$('accountEntryImage1')?.value||'',account_entry_image_2:$('accountEntryImage2')?.value||'',shop_name:$('editShopName').value.trim(),intro:$('editIntro').value.trim(),handle:$('editHandle').value.trim(),status:$('editStatus').value,line:$('editLine').value.trim(),x:$('editX').value.trim(),instagram:$('editInstagram').value.trim(),facebook:$('editFacebook').value.trim(),theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};
+    const {error}=await db.from('site_settings').upsert(payload,{onConflict:'id'});if(error)throw error;settings={...settings,...payload};renderSettings();$('shopAvatarFile').value='';$('shopCoverFile').value='';$('moodBunnyFile').value='';$('moodVanityFile').value='';setMessage('settingsMessage','บันทึกข้อมูลเรียบร้อยแล้ว ♡');toast('บันทึกข้อมูลร้านแล้ว ♡');}
     catch(err){setMessage('settingsMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
   async function uploadImage(file,bucket,folder){
@@ -220,6 +226,8 @@
     if(error)throw error;
     const {data}=db.storage.from(bucket).getPublicUrl(path); return data.publicUrl;
   }
+  $('moodBunnyFile')?.addEventListener('change',()=>previewFile($('moodBunnyFile'),$('moodBunnyPreview')));
+  $('moodVanityFile')?.addEventListener('change',()=>previewFile($('moodVanityFile'),$('moodVanityPreview')));
   const customerFile=$('customerReviewImage');
   customerFile?.addEventListener('change',()=>previewFile(customerFile,$('customerReviewImagePreview')));
   function previewFile(input,img){const file=input?.files?.[0];if(!img)return;if(file){img.src=URL.createObjectURL(file);img.hidden=false;}else{img.removeAttribute('src');img.hidden=true;}}
