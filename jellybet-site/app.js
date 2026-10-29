@@ -71,9 +71,9 @@
     ['accountEntryImage1','accountEntryImage2'].forEach((id,index)=>{
       const select=$(id);if(!select)return;
       const key=index===0?'account_entry_image_1':'account_entry_image_2';
-      const selected=String(settings[key]||select.value||'');
+      const selected=String(select.dataset.initialized==='true'?select.value:(settings[key]||select.value||''));
       select.innerHTML='<option value="">อัตโนมัติจากคลัง Account</option>'+candidates.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.title||'Account')} · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</option>`).join('');
-      select.value=candidates.some(a=>String(a.id)===selected)?selected:'';
+      select.value=candidates.some(a=>String(a.id)===selected)?selected:'';select.dataset.initialized='true';
       const image=$('accountEntryImagePreview'+(index+1)),account=candidates.find(a=>String(a.id)===select.value);
       if(image){image.src=account?.image_url||'';image.hidden=!account;}
     });
