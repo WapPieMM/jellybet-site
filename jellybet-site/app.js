@@ -65,7 +65,16 @@
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
   }
+  function renderAccountEntryPreview(){
+    const preview=$('accountEntryPreview');if(!preview)return;
+    const candidates=accounts.filter(a=>a.image_url&&a.status!=='sold').concat(accounts.filter(a=>a.image_url&&a.status==='sold'));
+    const samples=candidates.slice(0,2);
+    if(!samples.length){preview.hidden=true;preview.innerHTML='';return;}
+    preview.innerHTML=samples.map((a,i)=>`<figure class="account-entry-sample account-entry-sample-${i+1}"><img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title||'ตัวอย่าง Account')}" loading="lazy"><figcaption>${escapeHtml(a.title||'Account')}</figcaption></figure>`).join('');
+    preview.hidden=false;
+  }
   function renderAccounts(){
+    renderAccountEntryPreview();
     const grid=$('accountGrid'); if(!grid)return;
     const available=accounts.filter(a=>a.status==='available'||a.status==='installment');
     $('accountCount').textContent=`${available.length} พร้อมขาย/ติดผ่อน`;
