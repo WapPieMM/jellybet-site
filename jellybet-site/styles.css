@@ -153,20 +153,19 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 
 /* Account marketplace entry: live image samples from the account library */
 .account-entry-card{flex-wrap:wrap;overflow:hidden;padding:0;gap:0}
-.account-entry-preview{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;flex:0 0 100%;padding:12px 16px 0;position:relative}
+.account-entry-preview{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;flex:0 0 100%;padding:12px 16px 0;position:relative}
 .account-entry-preview[hidden]{display:none}
-.account-entry-sample{height:clamp(210px,28vw,340px);position:relative;overflow:hidden;margin:0;border-radius:22px 22px 8px 8px;background:#f8e9ef}
-.account-entry-sample img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;opacity:1;background:#f8e9ef}
-.account-entry-sample::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,249,251,0) 60%,rgba(255,246,249,.12) 76%,rgba(255,246,249,.94) 100%);pointer-events:none}
-.account-entry-sample figcaption{position:absolute;left:12px;right:12px;bottom:10px;z-index:1;color:#805b6b;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-entry-sample{height:150px;position:relative;overflow:hidden;margin:0;border-radius:20px 20px 8px 8px;background:#f8e9ef}
+.account-entry-sample img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.92}
+.account-entry-sample::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,249,251,0) 40%,rgba(255,246,249,.2) 65%,rgba(255,246,249,.96) 100%);pointer-events:none}
+.account-entry-sample figcaption{position:absolute;left:12px;right:12px;bottom:10px;z-index:1;color:#805b6b;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .account-entry-flower{margin:0 0 0 18px;align-self:center}
 .account-entry-copy{padding:18px 0 18px 16px;align-self:center}
 .account-entry-action{margin:18px 18px 18px auto;align-self:center}
 @media(max-width:520px){
  .account-entry-preview{gap:8px;padding:9px 9px 0}
- .account-entry-sample{height:clamp(150px,43vw,220px);border-radius:15px 15px 6px 6px}
- .account-entry-sample img{object-fit:contain}
- .account-entry-sample figcaption{font-size:10px;left:7px;right:7px;bottom:6px}
+ .account-entry-sample{height:105px;border-radius:15px 15px 6px 6px}
+ .account-entry-sample figcaption{font-size:9px;left:7px;right:7px;bottom:6px}
  .account-entry-flower{margin-left:12px}
  .account-entry-copy{padding:14px 0 14px 10px}
  .account-entry-action{margin:12px auto 14px;width:calc(100% - 24px);justify-content:center}
