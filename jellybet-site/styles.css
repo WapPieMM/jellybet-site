@@ -77,13 +77,13 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 @media(max-width:370px){.top-actions{gap:5px}.admin-icon-button,.icon-button{width:35px;height:35px;flex-basis:35px}.status-pill{padding:7px 8px}}
 
 
-/* Tiny floating hearts on pointer and touch interactions */
+/* Tiny floating flowers on pointer and touch interactions */
 .heart-effects{position:fixed;inset:0;z-index:9999;overflow:hidden;pointer-events:none;contain:layout paint}
-.floating-heart{position:fixed;display:block;left:0;top:0;color:#df8eae;font-size:20px;line-height:1;text-shadow:0 2px 8px rgba(217,143,174,.22);pointer-events:none;will-change:transform,opacity;animation:heart-float 950ms cubic-bezier(.18,.65,.35,1) forwards}
-.floating-heart:nth-child(3n){color:#c97fa0;font-size:16px}
-.floating-heart:nth-child(3n + 1){color:#edabc2;font-size:23px}
-@keyframes heart-float{0%{opacity:0;transform:translate3d(0,0,0) scale(.45) rotate(0deg)}15%{opacity:1;transform:translate3d(0,-10px,0) scale(1.12) rotate(var(--heart-rotate,0deg))}100%{opacity:0;transform:translate3d(var(--heart-drift,0px),-100px,0) scale(.72) rotate(var(--heart-rotate,0deg))}}
-@media(prefers-reduced-motion:reduce){.floating-heart{animation-duration:500ms}}
+.floating-flower{position:fixed;display:block;left:0;top:0;color:#df8eae;font-size:22px;line-height:1;text-shadow:0 2px 8px rgba(217,143,174,.22);pointer-events:none;will-change:transform,opacity;animation:flower-float 1050ms cubic-bezier(.18,.65,.35,1) forwards}
+.floating-flower:nth-child(3n){color:#c97fa0;font-size:18px}
+.floating-flower:nth-child(3n + 1){color:#edabc2;font-size:25px}
+@keyframes flower-float{0%{opacity:0;transform:translate3d(0,0,0) scale(.45) rotate(0deg)}15%{opacity:1;transform:translate3d(0,-10px,0) scale(1.12) rotate(var(--flower-rotate,0deg))}100%{opacity:0;transform:translate3d(var(--flower-drift,0px),-100px,0) scale(.72) rotate(var(--flower-rotate,0deg))}}
+@media(prefers-reduced-motion:reduce){.floating-flower{animation-duration:500ms}}
 
 /* Account card summaries and dedicated detail view */
 .account-description-preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:initial;min-height:0}
