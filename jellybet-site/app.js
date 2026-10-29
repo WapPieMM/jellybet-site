@@ -81,7 +81,7 @@
   function renderAccountEntryPreview(){
     const preview=$('accountEntryPreview');if(!preview)return;
     const candidates=accounts.filter(a=>a.image_url&&a.status!=='sold').concat(accounts.filter(a=>a.image_url&&a.status==='sold'));
-    const selectedIds=[$('accountEntryImage1')?.value||settings.account_entry_image_1,$('accountEntryImage2')?.value||settings.account_entry_image_2].filter(Boolean);
+    const selectedIds=[$('accountEntryImage1')?.dataset.userChanged==='true'? $('accountEntryImage1').value:($('accountEntryImage1')?.value||settings.account_entry_image_1),$('accountEntryImage2')?.dataset.userChanged==='true'? $('accountEntryImage2').value:($('accountEntryImage2')?.value||settings.account_entry_image_2)].filter(Boolean);
     let samples=selectedIds.map(id=>accounts.find(a=>String(a.id)===String(id)&&a.image_url)).filter(Boolean);
     if(!selectedIds.length)samples=candidates.slice(0,2);
     else if(samples.length<2)samples=samples.concat(candidates.filter(a=>!samples.some(s=>String(s.id)===String(a.id))).slice(0,2-samples.length));
