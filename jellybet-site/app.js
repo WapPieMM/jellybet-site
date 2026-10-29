@@ -238,25 +238,25 @@
   $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;showLogin();closeModal();toast('ออกจากระบบแล้ว');});
   if(db){db.auth.getSession().then(async({data})=>{if(data.session){currentUser=data.session.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();}});}
   document.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===a));}));
-  // Floating hearts on clicks and touch interactions, without blocking normal controls.
+  // Floating flowers on clicks and touch interactions, without blocking normal controls.
   const heartLayer=$('heartEffects');
   if(heartLayer){
     document.addEventListener('pointerdown',e=>{
       if(e.pointerType==='mouse'&&e.button!==0)return;
       const count=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:4;
-      const hearts=['♡','♥','💕','💗','୨୧'];
+      const flowers=['✿','❀','✾','✽','🌸'];
       for(let i=0;i<count;i++){
-        const heart=document.createElement('span');
-        heart.className='floating-heart';
-        heart.textContent=hearts[Math.floor(Math.random()*hearts.length)];
-        const spread= count===1?0: (Math.random()-0.5)*54;
-        heart.style.left=(e.clientX+spread)+'px';
-        heart.style.top=(e.clientY+(Math.random()-0.5)*24)+'px';
-        heart.style.setProperty('--heart-drift',(Math.random()-0.5)*90+'px');
-        heart.style.setProperty('--heart-rotate',(Math.random()-0.5)*55+'deg');
-        heart.style.animationDelay=(Math.random()*100)+'ms';
-        heartLayer.appendChild(heart);
-        heart.addEventListener('animationend',()=>heart.remove(),{once:true});
+        const flower=document.createElement('span');
+        flower.className='floating-flower';
+        flower.textContent=flowers[Math.floor(Math.random()*flowers.length)];
+        const spread=count===1?0:(Math.random()-0.5)*54;
+        flower.style.left=(e.clientX+spread)+'px';
+        flower.style.top=(e.clientY+(Math.random()-0.5)*24)+'px';
+        flower.style.setProperty('--flower-drift',(Math.random()-0.5)*90+'px');
+        flower.style.setProperty('--flower-rotate',(Math.random()-0.5)*75+'deg');
+        flower.style.animationDelay=(Math.random()*100)+'ms';
+        heartLayer.appendChild(flower);
+        flower.addEventListener('animationend',()=>flower.remove(),{once:true});
       }
     },{passive:true});
   }
