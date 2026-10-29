@@ -71,9 +71,9 @@
     ['accountEntryImage1','accountEntryImage2'].forEach((id,index)=>{
       const select=$(id);if(!select)return;
       const key=index===0?'account_entry_image_1':'account_entry_image_2';
-      const selected=String(select.dataset.initialized==='true'?select.value:(settings[key]||select.value||''));
+      const selected=String(select.dataset.userChanged==='true'?select.value:(settings[key]||select.value||''));
       select.innerHTML='<option value="">อัตโนมัติจากคลัง Account</option>'+candidates.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.title||'Account')} · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</option>`).join('');
-      select.value=candidates.some(a=>String(a.id)===selected)?selected:'';select.dataset.initialized='true';
+      select.value=candidates.some(a=>String(a.id)===selected)?selected:'';
       const image=$('accountEntryImagePreview'+(index+1)),account=candidates.find(a=>String(a.id)===select.value);
       if(image){image.src=account?.image_url||'';image.hidden=!account;}
     });
@@ -234,7 +234,7 @@
       setMessage('customerReviewMessage','ส่งรีวิวแล้วค่ะ ♡ รอเจ้าของร้านตรวจสอบก่อนแสดงบนเว็บไซต์นะคะ');toast('ส่งรีวิวเรียบร้อยแล้ว ♡');
     }catch(err){setMessage('customerReviewMessage','ส่งรีวิวไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
-  ['accountEntryImage1','accountEntryImage2'].forEach(id=>$(id)?.addEventListener('change',()=>{renderAccountEntryImageOptions();renderAccountEntryPreview();}));
+  ['accountEntryImage1','accountEntryImage2'].forEach(id=>$(id)?.addEventListener('change',()=>{$(id).dataset.userChanged='true';renderAccountEntryImageOptions();renderAccountEntryPreview();}));
   $('shopAvatarFile')?.addEventListener('change',()=>previewFile($('shopAvatarFile'),$('shopAvatarPreview')));
   $('shopCoverFile')?.addEventListener('change',()=>previewFile($('shopCoverFile'),$('shopCoverPreview')));
   $('reviewImageFile')?.addEventListener('change',()=>previewFile($('reviewImageFile'),$('reviewImagePreview')));
