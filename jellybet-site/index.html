@@ -113,6 +113,13 @@
             <label>ชื่อบัญชี/แฮนเดิลที่แสดง<input id="editHandle" maxlength="100" placeholder="เช่น @jellybet"></label>
             <label>รูปโปรไฟล์ร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopAvatarFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopAvatarPreview" alt="ตัวอย่างรูปโปรไฟล์" hidden></div>
             <label>รูปปก/ภาพพื้นหลังร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopCoverFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopCoverPreview" alt="ตัวอย่างรูปปก" hidden></div>
+            <div class="account-entry-image-settings">
+              <p class="admin-field-heading">รูปตัวอย่าง Account บนหน้าแรก</p>
+              <p class="admin-field-help">เลือกรูปจากรายการ Account ที่มีอยู่ได้เลย ไม่ต้องอัปโหลดซ้ำค่ะ</p>
+              <label>รูปตัวอย่างที่ 1<select id="accountEntryImage1"><option value="">อัตโนมัติจากคลัง Account</option></select></label>
+              <label>รูปตัวอย่างที่ 2<select id="accountEntryImage2"><option value="">อัตโนมัติจากคลัง Account</option></select></label>
+              <div class="image-preview-row account-entry-admin-previews"><img id="accountEntryImagePreview1" alt="ตัวอย่างรูป Account 1" hidden><img id="accountEntryImagePreview2" alt="ตัวอย่างรูป Account 2" hidden></div>
+            </div>
             <label>สถานะร้าน<select id="editStatus"><option value="open">เปิดให้บริการ</option><option value="closed">ปิดให้บริการ</option></select></label>
             <label>LINE (ใส่ URL หรือชื่อบัญชี)<input id="editLine" placeholder="https://line.me/... หรือ @lineid"></label>
             <label>X / Twitter (ใส่ URL หรือชื่อบัญชี)<input id="editX" placeholder="https://x.com/... หรือ @username"></label>

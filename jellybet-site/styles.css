@@ -170,3 +170,23 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
  .account-entry-copy{padding:14px 0 14px 10px}
  .account-entry-action{margin:12px auto 14px;width:calc(100% - 24px);justify-content:center}
 }
+
+
+/* Admin: choose homepage account images from the existing account library */
+.account-entry-image-settings{padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,#fff9fb,#fff1f6);display:grid;gap:10px}
+.admin-field-heading{margin:0;font-weight:700;color:var(--ink)}
+.admin-field-help{margin:-5px 0 0;font-size:12px;line-height:1.6;color:var(--muted)}
+.account-entry-image-settings label{margin:0}
+.account-entry-admin-previews{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.account-entry-admin-previews img{width:100%;height:110px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px}
+.account-entry-admin-previews img[hidden]{display:none}
+.admin-account-group{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.52)}
+.admin-account-group>h4{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:15px;color:var(--ink)}
+.admin-account-group>h4>span{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:10px;background:#fff0f5;color:#bd7896}
+.admin-account-group>h4 small{margin-left:auto;padding:4px 9px;border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:500}
+.admin-account-group-installment>h4>span{background:#fff3df;color:#a67832}
+.admin-account-group-sold>h4>span{background:#f0f0f0;color:#777}
+.admin-account-group-list{display:grid;gap:10px}
+.admin-account-group-empty{padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
+.admin-account-group .admin-account-item{margin:0;background:#fff}
+@media(max-width:520px){.account-entry-image-settings{padding:11px}.account-entry-admin-previews img{height:82px}.admin-account-group{padding:10px}}

@@ -3,7 +3,7 @@
   const cfg = window.JELLYBET_CONFIG || {};
   const configured = !!(window.supabase && cfg.supabaseUrl && cfg.supabaseAnonKey && !cfg.supabaseUrl.includes('YOUR-PROJECT') && !cfg.supabaseAnonKey.includes('YOUR_SUPABASE'));
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
-  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b' };
+  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'' };
   let settings = { ...defaultSettings }, reviews = [], accounts = [], musicTracks = [], currentUser = null;
   const contactDefs = [
     {key:'line',label:'LINE',icon:'♡',hint:'พูดคุยและสอบถามข้อมูล'},
@@ -64,11 +64,27 @@
     }).filter(Boolean).join('') || '<div class="empty-state"><span>♡</span><p>ยังไม่ได้เพิ่มช่องทางติดต่อ</p><small>เจ้าของร้านสามารถเพิ่มข้อมูลได้จากหลังบ้าน</small></div>';
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
+    renderAccountEntryImageOptions();
+  }
+  function renderAccountEntryImageOptions(){
+    const candidates=accounts.filter(a=>a.image_url);
+    ['accountEntryImage1','accountEntryImage2'].forEach((id,index)=>{
+      const select=$(id);if(!select)return;
+      const key=index===0?'account_entry_image_1':'account_entry_image_2';
+      const selected=String(select.dataset.userChanged==='true'?select.value:(settings[key]||select.value||''));
+      select.innerHTML='<option value="">อัตโนมัติจากคลัง Account</option>'+candidates.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.title||'Account')} · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</option>`).join('');
+      select.value=candidates.some(a=>String(a.id)===selected)?selected:'';
+      const image=$('accountEntryImagePreview'+(index+1)),account=candidates.find(a=>String(a.id)===select.value);
+      if(image){image.src=account?.image_url||'';image.hidden=!account;}
+    });
   }
   function renderAccountEntryPreview(){
     const preview=$('accountEntryPreview');if(!preview)return;
     const candidates=accounts.filter(a=>a.image_url&&a.status!=='sold').concat(accounts.filter(a=>a.image_url&&a.status==='sold'));
-    const samples=candidates.slice(0,2);
+    const selectedIds=[$('accountEntryImage1')?.dataset.userChanged==='true'? $('accountEntryImage1').value:($('accountEntryImage1')?.value||settings.account_entry_image_1),$('accountEntryImage2')?.dataset.userChanged==='true'? $('accountEntryImage2').value:($('accountEntryImage2')?.value||settings.account_entry_image_2)].filter(Boolean);
+    let samples=selectedIds.map(id=>accounts.find(a=>String(a.id)===String(id)&&a.image_url)).filter(Boolean);
+    if(!selectedIds.length)samples=candidates.slice(0,2);
+    else if(samples.length<2)samples=samples.concat(candidates.filter(a=>!samples.some(s=>String(s.id)===String(a.id))).slice(0,2-samples.length));
     if(!samples.length){preview.hidden=true;preview.innerHTML='';return;}
     preview.innerHTML=samples.map((a,i)=>`<figure class="account-entry-sample account-entry-sample-${i+1}"><img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title||'ตัวอย่าง Account')}" loading="lazy"><figcaption>${escapeHtml(a.title||'Account')}</figcaption></figure>`).join('');
     preview.hidden=false;
@@ -96,8 +112,12 @@
   function renderAdminAccounts(){
     const list=$('adminAccountList');if(!list)return;
     if(!currentUser){list.innerHTML='';return;}
-    list.innerHTML=accounts.length?accounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · ${a.status==='sold'?'ขายแล้ว':a.status==='installment'?'ติดผ่อน':'พร้อมขาย'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
+    const groups=[{key:'available',label:'พร้อมขาย',icon:'♡'},{key:'installment',label:'ติดผ่อน',icon:'◷'},{key:'sold',label:'ขายแล้ว',icon:'✓'}];
+    const card=a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`;
+    list.innerHTML=accounts.length?groups.map(g=>{const items=accounts.filter(a=>(a.status||'available')===g.key);return `<section class="admin-account-group admin-account-group-${g.key}"><h4><span>${g.icon}</span> ${g.label}<small>${items.length} รายการ</small></h4><div class="admin-account-group-list">${items.length?items.map(card).join(''):'<div class="admin-account-group-empty">ไม่มี Account ในหมวดนี้ค่ะ</div>'}</div></section>`;}).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
     const installmentList=$('installmentAccountList');if(installmentList){const availableAccounts=accounts.filter(a=>a.status==='available');installmentList.innerHTML=availableAccounts.length?availableAccounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · พร้อมขาย</p></div></div><p>${a.installment_details?escapeHtml(a.installment_details):'ยังไม่ได้เพิ่มรายละเอียดการผ่อน'}</p><div class="admin-item-actions"><button data-edit-installment="${escapeHtml(a.id)}">${a.installment_details?'แก้ไขรายละเอียดการผ่อน':'เพิ่มรายละเอียดการผ่อน'}</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account สถานะพร้อมขายให้จัดการค่ะ ♡</p></div>';}
+    renderAccountEntryImageOptions();
+    renderAccountEntryPreview();
   }
   async function refreshAccounts(){
     if(!db)return;
@@ -185,7 +205,7 @@
     let avatar_url=settings.avatar_url||'', cover_url=settings.cover_url||'';
     if($('shopAvatarFile').files[0]) avatar_url=await uploadImage($('shopAvatarFile').files[0],'shop-images','admin');
     if($('shopCoverFile').files[0]) cover_url=await uploadImage($('shopCoverFile').files[0],'shop-images','admin');
-    const payload={id:1,avatar_url,cover_url,shop_name:$('editShopName').value.trim(),intro:$('editIntro').value.trim(),handle:$('editHandle').value.trim(),status:$('editStatus').value,line:$('editLine').value.trim(),x:$('editX').value.trim(),instagram:$('editInstagram').value.trim(),facebook:$('editFacebook').value.trim(),theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};
+    const payload={id:1,avatar_url,cover_url,account_entry_image_1:$('accountEntryImage1')?.value||'',account_entry_image_2:$('accountEntryImage2')?.value||'',shop_name:$('editShopName').value.trim(),intro:$('editIntro').value.trim(),handle:$('editHandle').value.trim(),status:$('editStatus').value,line:$('editLine').value.trim(),x:$('editX').value.trim(),instagram:$('editInstagram').value.trim(),facebook:$('editFacebook').value.trim(),theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};
     const {error}=await db.from('site_settings').upsert(payload,{onConflict:'id'});if(error)throw error;settings={...settings,...payload};renderSettings();$('shopAvatarFile').value='';$('shopCoverFile').value='';setMessage('settingsMessage','บันทึกข้อมูลเรียบร้อยแล้ว ♡');toast('บันทึกข้อมูลร้านแล้ว ♡');}
     catch(err){setMessage('settingsMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
@@ -214,6 +234,7 @@
       setMessage('customerReviewMessage','ส่งรีวิวแล้วค่ะ ♡ รอเจ้าของร้านตรวจสอบก่อนแสดงบนเว็บไซต์นะคะ');toast('ส่งรีวิวเรียบร้อยแล้ว ♡');
     }catch(err){setMessage('customerReviewMessage','ส่งรีวิวไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
+  ['accountEntryImage1','accountEntryImage2'].forEach(id=>$(id)?.addEventListener('change',()=>{$(id).dataset.userChanged='true';renderAccountEntryImageOptions();renderAccountEntryPreview();}));
   $('shopAvatarFile')?.addEventListener('change',()=>previewFile($('shopAvatarFile'),$('shopAvatarPreview')));
   $('shopCoverFile')?.addEventListener('change',()=>previewFile($('shopCoverFile'),$('shopCoverPreview')));
   $('reviewImageFile')?.addEventListener('change',()=>previewFile($('reviewImageFile'),$('reviewImagePreview')));
