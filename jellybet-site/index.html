@@ -38,9 +38,9 @@
       </section>
 
       <section class="moodboard" id="siteMoodboard" aria-label="jellybet aesthetic">
-        <figure class="mood-photo mood-photo-bunny"><img src="assets/coquette-bunny.jpeg" alt="ตุ๊กตากระต่ายสีครีมผูกโบว์ชมพู" loading="lazy"><figcaption>soft & lovely</figcaption></figure>
+        <figure class="mood-photo mood-photo-bunny"><img id="moodBunnyImage" src="assets/coquette-bunny.jpeg" alt="ตุ๊กตากระต่ายสีครีมผูกโบว์ชมพู" loading="lazy"><figcaption>soft & lovely</figcaption></figure>
         <div class="mood-note"><span class="mood-sparkle">୨୧</span><p>a little<br>dreamy corner</p><small id="moodboardSiteName">♡ jellybet ♡</small><span class="mood-sparkle">୨୧</span></div>
-        <figure class="mood-photo mood-photo-vanity"><img src="assets/coquette-vanity.jpeg" alt="มุมโต๊ะเครื่องแป้งโทนชมพูวินเทจและไข่มุก" loading="lazy"><figcaption>pretty little things</figcaption></figure>
+        <figure class="mood-photo mood-photo-vanity"><img id="moodVanityImage" src="assets/coquette-vanity.jpeg" alt="มุมโต๊ะเครื่องแป้งโทนชมพูวินเทจและไข่มุก" loading="lazy"><figcaption>pretty little things</figcaption></figure>
       </section>
 
       <section class="welcome-card card">
@@ -113,6 +113,14 @@
             <label>ชื่อบัญชี/แฮนเดิลที่แสดง<input id="editHandle" maxlength="100" placeholder="เช่น @jellybet"></label>
             <label>รูปโปรไฟล์ร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopAvatarFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopAvatarPreview" alt="ตัวอย่างรูปโปรไฟล์" hidden></div>
             <label>รูปปก/ภาพพื้นหลังร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopCoverFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopCoverPreview" alt="ตัวอย่างรูปปก" hidden></div>
+            <div class="moodboard-image-settings">
+              <p class="admin-field-heading">รูปภาพตกแต่งหน้าแรก (รองรับ GIF)</p>
+              <p class="admin-field-help">เปลี่ยนรูปกระต่ายด้านซ้ายและรูปของตกแต่งด้านขวาได้จากตรงนี้ รองรับ JPG, PNG, WEBP และ GIF แบบเคลื่อนไหว ขนาดไม่เกิน 5 MB ต่อรูป</p>
+              <label>รูปกระต่ายด้านซ้าย<input id="moodBunnyFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+              <div class="image-preview-row"><img id="moodBunnyPreview" alt="ตัวอย่างรูปกระต่าย" hidden></div>
+              <label>รูปตกแต่งด้านขวา<input id="moodVanityFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+              <div class="image-preview-row"><img id="moodVanityPreview" alt="ตัวอย่างรูปตกแต่ง" hidden></div>
+            </div>
             <div class="account-entry-image-settings">
               <p class="admin-field-heading">รูปตัวอย่าง Account บนหน้าแรก</p>
               <p class="admin-field-help">เลือกรูปจากรายการ Account ที่มีอยู่ได้เลย ไม่ต้องอัปโหลดซ้ำค่ะ</p>
