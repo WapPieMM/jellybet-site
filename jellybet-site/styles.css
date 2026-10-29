@@ -191,3 +191,11 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .admin-account-group-empty{padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
 .admin-account-group .admin-account-item{margin:0;background:#fff}
 @media(max-width:520px){.account-entry-image-settings{padding:11px}.account-entry-admin-previews img{height:82px}.admin-account-group{padding:10px}}
+
+
+/* Homepage moodboard image controls in admin (JPG/PNG/WEBP/GIF) */
+.moodboard-image-settings{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,#fff9fb,#fff1f6)}
+.moodboard-image-settings>label{margin:0}
+.moodboard-image-settings .image-preview-row{margin-top:-4px}
+.moodboard-image-settings .image-preview-row img{display:block;width:min(100%,320px);max-height:180px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff;padding:5px}
+.moodboard-image-settings .image-preview-row img[hidden]{display:none}
