@@ -150,11 +150,14 @@
     const img=$('accountImagePreview');if(img){img.hidden=true;img.removeAttribute('src');}
     setMessage('accountMessage','');
   }
+  let reviewsExpanded=false;
   function renderReviews(){
     const published=reviews.filter(r=>r.published);
     $('statReviews').textContent=published.length; $('reviewCount').textContent=`${published.length} รีวิว`;
     $('statRating').textContent=published.length ? (published.reduce((n,r)=>n+Number(r.rating||5),0)/published.length).toFixed(1) : '—';
-    $('reviewList').innerHTML=published.length ? published.map(r=>`<article class="review-card card"><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars review-hearts" aria-label="${Number(r.rating||5)} จาก 5 หัวใจ">${'♥'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'♡'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" referrerpolicy="no-referrer"></a>`:''}</article>`).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
+    const visibleReviews=reviewsExpanded?published:published.slice(0,5);
+    $('reviewList').innerHTML=published.length ? visibleReviews.map(r=>`<article class="review-card card"><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars review-hearts" aria-label="${Number(r.rating||5)} จาก 5 หัวใจ">${'♥'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'♡'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" referrerpolicy="no-referrer"></a>`:''}</article>`).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
+    const moreButton=$('reviewMoreButton');if(moreButton){moreButton.hidden=published.length<=5;moreButton.textContent=reviewsExpanded?'แสดงรีวิวน้อยลง ♡':`ดูรีวิวเพิ่มเติม (${published.length-5}) ♡`;}
     renderAdminReviews();
   }
   async function loadPublic(){
@@ -268,6 +271,7 @@
     if(error){setMessage('reviewMessage','โหลดรีวิวไม่สำเร็จ: '+error.message,true);return;}
     reviews=data||[]; renderReviews();
   }
+  $('reviewMoreButton')?.addEventListener('click',()=>{reviewsExpanded=!reviewsExpanded;renderReviews();});
   $('heartButton').addEventListener('click',()=>{const b=$('heartButton');b.classList.toggle('saved');b.textContent=b.classList.contains('saved')?'♥':'♡';toast(b.classList.contains('saved')?'เพิ่มหัวใจให้ jellybet แล้ว ♡':'ยกเลิกหัวใจแล้ว');});
   document.querySelectorAll('#openAdmin, #openAdminIcon').forEach(button=>button.addEventListener('click',openModal)); $('closeAdmin').addEventListener('click',closeModal);
   $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))closeModal();});

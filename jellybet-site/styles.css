@@ -239,3 +239,7 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .music-player button{width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:linear-gradient(145deg,#e7b2c5,#c58da5);color:#fff;font-size:16px;cursor:pointer}
 .music-player span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
 @media(max-width:520px){.music-player{right:12px;bottom:calc(72px + env(safe-area-inset-bottom))}}
+
+
+/* Public review list expansion */
+.review-more-button{display:block;margin:16px auto 0;padding:10px 22px;border:1px solid var(--pink-strong);border-radius:999px;background:var(--card-bg);color:var(--ink);font:inherit;font-size:.92rem;cursor:pointer;transition:background .2s ease,transform .2s ease}.review-more-button:hover{background:var(--pink);transform:translateY(-1px)}.review-more-button[hidden]{display:none}
