@@ -192,10 +192,10 @@
   async function startMusicAfterGesture(){
     if(musicStarted||!siteMusic.enabled||!siteMusic.audio_url||!musicAudio)return;
     musicStarted=true;
-    try{await musicAudio.play();renderMusic();}catch(err){musicStarted=false;console.info('เบราว์เซอร์ยังไม่อนุญาตให้เล่นเพลง',err);}
+    try{await musicAudio.play();document.removeEventListener('pointerdown',startMusicAfterGesture,true);document.removeEventListener('keydown',startMusicAfterGesture,true);renderMusic();}catch(err){musicStarted=false;console.info('เบราว์เซอร์ยังไม่อนุญาตให้เล่นเพลง',err);}
   }
-  document.addEventListener('pointerdown',startMusicAfterGesture,{once:true,capture:true});
-  document.addEventListener('keydown',startMusicAfterGesture,{once:true,capture:true});
+  document.addEventListener('pointerdown',startMusicAfterGesture,{capture:true});
+  document.addEventListener('keydown',startMusicAfterGesture,{capture:true});
   $('musicToggle')?.addEventListener('click',async()=>{
     if(!musicAudio)return;
     if(musicAudio.paused){try{await musicAudio.play();musicStarted=true;}catch(e){toast('เบราว์เซอร์ไม่อนุญาตให้เล่นเพลง');}}
