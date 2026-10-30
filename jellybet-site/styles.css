@@ -232,3 +232,11 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .contact-card-action b{font-size:13px;font-weight:500}
 @media(max-width:390px){.contact-card-grid{gap:8px}.contact-card-item{min-height:78px;padding:10px 8px;gap:8px;border-radius:16px}.contact-card-icon{width:36px;height:36px;flex-basis:36px;border-radius:12px;font-size:18px}.contact-card-copy strong{font-size:11px}.contact-card-action{font-size:8px}}
 @media(min-width:560px){.contact-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.contact-card-item{padding:16px}}
+
+
+/* Storefront music player */
+.music-player{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:9px;max-width:min(240px,calc(100vw - 32px));padding:8px 13px 8px 8px;border:1px solid #efd8e2;border-radius:999px;background:rgba(255,250,252,.94);box-shadow:0 8px 24px rgba(138,91,111,.14);backdrop-filter:blur(12px);color:#9d6680;font-size:11px}
+.music-player[hidden]{display:none}
+.music-player button{width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:linear-gradient(145deg,#e7b2c5,#c58da5);color:#fff;font-size:16px;cursor:pointer}
+.music-player span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+@media(max-width:520px){.music-player{right:12px;bottom:calc(72px + env(safe-area-inset-bottom))}}
