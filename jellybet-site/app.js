@@ -169,6 +169,66 @@
       reviews=reviewData||[]; renderSettings(); renderReviews();
     }catch(e){console.error(e);renderSettings();renderReviews();toast('โหลดข้อมูลไม่สำเร็จ โปรดตรวจสอบการตั้งค่า Supabase');}
   }
+  let siteMusic={title:'เพลงประจำร้าน',audio_url:'',enabled:false},musicStarted=false;
+  const musicAudio=$('siteMusicAudio');
+  function renderMusic(){
+    if(!musicAudio)return;
+    const player=$('musicPlayer'),toggle=$('musicToggle');
+    if(siteMusic.enabled&&siteMusic.audio_url){
+      if(musicAudio.src!==siteMusic.audio_url)musicAudio.src=siteMusic.audio_url;
+      player.hidden=false;$('musicPlayerTitle').textContent=siteMusic.title||'เพลงประจำร้าน';
+      if($('musicTitle'))$('musicTitle').value=siteMusic.title||'';
+      if($('musicEnabled'))$('musicEnabled').checked=true;
+      if($('musicCurrentTrack'))$('musicCurrentTrack').textContent='เพลงปัจจุบัน: '+(siteMusic.title||'เพลงประจำร้าน');
+      if(toggle)toggle.textContent=musicAudio.paused?'♫':'Ⅱ';
+    }else{player.hidden=true;musicAudio.pause();if($('musicCurrentTrack'))$('musicCurrentTrack').textContent='ยังไม่มีเพลงเปิดใช้งาน';}
+  }
+  async function loadSiteMusic(){
+    if(!db)return;
+    const {data,error}=await db.from('site_music').select('*').eq('id',1).maybeSingle();
+    if(error){console.warn('โหลดเพลงไม่สำเร็จ',error.message);return;}
+    if(data)siteMusic={...siteMusic,...data};renderMusic();
+  }
+  async function startMusicAfterGesture(){
+    if(musicStarted||!siteMusic.enabled||!siteMusic.audio_url||!musicAudio)return;
+    musicStarted=true;
+    try{await musicAudio.play();document.removeEventListener('pointerdown',startMusicAfterGesture,true);document.removeEventListener('keydown',startMusicAfterGesture,true);renderMusic();}catch(err){musicStarted=false;console.info('เบราว์เซอร์ยังไม่อนุญาตให้เล่นเพลง',err);}
+  }
+  document.addEventListener('pointerdown',startMusicAfterGesture,{capture:true});
+  document.addEventListener('keydown',startMusicAfterGesture,{capture:true});
+  $('musicToggle')?.addEventListener('click',async()=>{
+    if(!musicAudio)return;
+    if(musicAudio.paused){try{await musicAudio.play();musicStarted=true;}catch(e){toast('เบราว์เซอร์ไม่อนุญาตให้เล่นเพลง');}}
+    else{musicAudio.pause();}
+    renderMusic();
+  });
+  $('musicForm')?.addEventListener('submit',async e=>{
+    e.preventDefault();if(!db||!currentUser){setMessage('musicMessage','กรุณาเข้าสู่ระบบเจ้าของร้านและเชื่อมต่อ Supabase ก่อน',true);return;}
+    const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('musicMessage','กำลังบันทึกเพลง…');
+    try{
+      let audio_url=siteMusic.audio_url||'';
+      const file=$('musicFile').files[0];
+      if(file){
+        if(file.size>15*1024*1024)throw new Error('ไฟล์เพลงต้องมีขนาดไม่เกิน 15 MB');
+        if(!file.type.startsWith('audio/'))throw new Error('กรุณาเลือกไฟล์เสียงเท่านั้น');
+        const ext=(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'');
+        const path='admin/store-music-'+Date.now()+'.'+ext;
+        const {data,error}=await db.storage.from('shop-music').upload(path,file,{upsert:true,contentType:file.type});
+        if(error)throw error;
+        audio_url=db.storage.from('shop-music').getPublicUrl(data.path).data.publicUrl;
+      }
+      const payload={id:1,title:$('musicTitle').value.trim()||'เพลงประจำร้าน',audio_url,enabled:$('musicEnabled').checked,updated_at:new Date().toISOString()};
+      const {error}=await db.from('site_music').upsert(payload,{onConflict:'id'});if(error)throw error;
+      siteMusic=payload;musicStarted=false;renderMusic();setMessage('musicMessage','บันทึกเพลงเรียบร้อยแล้ว ♡');toast('อัปเดตเพลงหน้าร้านแล้ว');
+    }catch(err){setMessage('musicMessage','บันทึกเพลงไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
+  });
+  $('removeMusic')?.addEventListener('click',async()=>{
+    if(!db||!currentUser)return;
+    if(!confirm('ต้องการปิดเพลงบนหน้าร้านใช่ไหม?'))return;
+    const {error}=await db.from('site_music').upsert({id:1,title:'เพลงประจำร้าน',audio_url:'',enabled:false,updated_at:new Date().toISOString()},{onConflict:'id'});
+    if(error){setMessage('musicMessage','ปิดเพลงไม่สำเร็จ: '+error.message,true);return;}
+    siteMusic={title:'เพลงประจำร้าน',audio_url:'',enabled:false};renderMusic();setMessage('musicMessage','นำเพลงออกจากหน้าร้านแล้ว ♡');
+  });
   function openModal(){ $('adminModal').hidden=false; document.body.style.overflow='hidden'; if(!configured){$('setupHint').hidden=false; $('loginMessage').textContent='';} else {$('setupHint').hidden=true;} }
   function closeModal(){ $('adminModal').hidden=true; document.body.style.overflow=''; }
   function showDashboard(){ $('adminLoginView').hidden=true; $('adminDashboard').hidden=false; renderSettings(); renderAdminReviews(); }
@@ -279,7 +339,7 @@
   ['themeBg','themeCard','themePrimary','themeSoft','themeText'].forEach(id=>$(id)?.addEventListener('input',()=>{if($('themePreset'))$('themePreset').value='custom';updateThemePreview();}));
   $('resetTheme')?.addEventListener('click',()=>{const preset=themePresets[$('themePreset').value]||themePresets.coquette;setThemeInputs(preset);toast('แสดงตัวอย่างสีแล้ว อย่าลืมกดบันทึกนะคะ');});
   $('themeForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!db){setMessage('themeMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกธีม',true);return;}if(!currentUser){setMessage('themeMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('themeMessage','กำลังบันทึกธีม…');try{const payload={id:1,theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};const {error}=await db.from('site_settings').upsert({...settings,...payload},{onConflict:'id'});if(error)throw error;settings={...settings,...payload};applyTheme(settings);setMessage('themeMessage','บันทึกธีมเรียบร้อยแล้ว ♡');toast('บันทึกธีมเว็บไซต์แล้ว ♡');}catch(err){setMessage('themeMessage','บันทึกธีมไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}});
-  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';$('installmentAdminTab').hidden=btn.dataset.tab!=='installmentAdmin';if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin'||btn.dataset.tab==='installmentAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
+  document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';$('installmentAdminTab').hidden=btn.dataset.tab!=='installmentAdmin';$('musicAdminTab').hidden=btn.dataset.tab!=='musicAdmin';if(btn.dataset.tab==='musicAdmin')loadSiteMusic();if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin'||btn.dataset.tab==='installmentAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
   $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;showLogin();closeModal();toast('ออกจากระบบแล้ว');});
   if(db){db.auth.getSession().then(async({data})=>{if(data.session){currentUser=data.session.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();}});}
   document.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===a));}));
@@ -307,5 +367,6 @@
   }
   loadPublic();
   loadPublicAccounts();
+  loadSiteMusic();
   
 })();
