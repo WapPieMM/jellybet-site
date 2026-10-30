@@ -21,7 +21,7 @@
    try{
     const plans=JSON.parse(end>=0?rest.slice(0,end+1):rest);
     const note=end>=0?rest.slice(end+1).trim().replace(/^\n/,''):'';
-    const cards=plans.map(plan=>{const down=Number(plan.down)||0,installment=Number(plan.total)||0,grandTotal=down+installment;return '<article class="account-installment-option"><span class="account-installment-option-title">ผ่อน '+Number(plan.months||0)+' เดือน</span><p>= วางดาวน์ '+down.toLocaleString('th-TH')+'฿ ผ่อนต่ออีก '+installment.toLocaleString('th-TH')+'฿<br><strong class="account-installment-grand-total">ยอดรวม (ดาวน์ + ผ่อนต่อ) = '+grandTotal.toLocaleString('th-TH')+' ฿</strong><br>ส่งยอดทุกวีคละ '+Number(plan.weekly||0).toLocaleString('th-TH')+' ฿</p></article>';}).join('');
+    const cards=plans.map(plan=>{const down=Number(plan.down)||0,installment=Number(plan.total)||0,grandTotal=down+installment;return '<article class="account-installment-option"><span class="account-installment-option-title">ผ่อน '+Number(plan.months||0)+' เดือน</span><p>= วางดาวน์ '+down.toLocaleString('th-TH')+'฿ ผ่อนต่ออีก '+installment.toLocaleString('th-TH')+'฿<br>ส่งยอด อาทิตย์ละ '+Number(plan.weekly||0).toLocaleString('th-TH')+' ฿<br><strong class="account-installment-grand-total">ยอดรวม (ดาวน์ + ผ่อนต่อ) = '+grandTotal.toLocaleString('th-TH')+' ฿</strong></p></article>';}).join('');
     return '<section class="account-installment-details"><h2>รายละเอียดการผ่อน ≡</h2><div class="account-installment-options">'+cards+'</div>'+(note?'<p class="account-installment-note">'+formatAccountDescription(note)+'</p>':'')+'</section>';
    }catch(error){console.warn('Could not parse installment plans',error);}
   }
