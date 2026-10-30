@@ -244,3 +244,15 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 
 /* Public review list expansion */
 .review-more-button{display:block;margin:16px auto 0;padding:10px 22px;border:1px solid var(--pink-strong);border-radius:999px;background:var(--card-bg);color:var(--ink);font:inherit;font-size:.92rem;cursor:pointer;transition:background .2s ease,transform .2s ease}.review-more-button:hover{background:var(--pink);transform:translateY(-1px)}.review-more-button[hidden]{display:none}
+
+
+/* Three contact cards per row */
+.contact-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.contact-card-item{min-height:112px;padding:11px 9px;gap:7px;flex-direction:column;align-items:flex-start}
+.contact-card-icon{width:34px;height:34px;flex-basis:34px;border-radius:11px;font-size:17px}
+.contact-card-copy{width:100%}
+.contact-card-copy strong{font-size:11px}
+.contact-card-copy small{font-size:9px}
+.contact-card-action{font-size:8px}
+@media(max-width:390px){.contact-card-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.contact-card-item{min-height:105px;padding:9px 7px;gap:6px}.contact-card-icon{width:30px;height:30px;flex-basis:30px;font-size:15px}.contact-card-copy strong{font-size:10px}.contact-card-copy small{font-size:8px}.contact-card-action{font-size:7px}}
+@media(min-width:560px){.contact-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.contact-card-item{padding:12px}}
