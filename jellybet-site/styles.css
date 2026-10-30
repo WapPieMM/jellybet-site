@@ -275,3 +275,6 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .contact-card-action b,.account-entry-action>span{display:none!important}
 .contact-card-action{gap:0}
 .account-entry-action{gap:0}
+
+/* Structured account admin form */
+.account-admin-section{display:grid;gap:11px;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,#fffafd,#fff3f7)}.account-admin-section h4{margin:0;color:#98647b;font-size:14px}.account-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.account-check-grid label{display:flex!important;align-items:center;gap:8px!important;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fff}.account-check-grid input{width:17px!important;height:17px;accent-color:var(--pink-strong)}.account-admin-inline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.account-admin-highlight{padding:12px;border:1px solid #efc6d7;border-radius:13px;background:linear-gradient(110deg,#ffe3ef,#fff0f6);color:#a65378!important;font-weight:700}.account-monthly-payments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.account-monthly-payments label{padding:9px;border:1px solid #f0dce5;border-radius:11px;background:#fff}
