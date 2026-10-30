@@ -213,11 +213,9 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .review-hearts{color:#d77e9e;letter-spacing:2px}
 .admin-review-rating,.stars{color:#d77e9e}
 @media(max-width:600px){.rating-heart-button{width:36px;height:36px;font-size:23px}}
-/* Floating contact rail inspired by Sainty */
-.floating-contact-dock{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(86px + env(safe-area-inset-bottom));z-index:30;display:flex;flex-direction:column;gap:9px;align-items:center}
-.floating-contact-dock[hidden]{display:none}
-.floating-contact-link{width:54px;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #efdce4;border-radius:18px;background:#fffdfd;color:#bd7896;box-shadow:0 8px 24px #87667520;text-decoration:none;transition:transform .18s,box-shadow .18s,background .18s}
-.floating-contact-link:hover{transform:translateY(-3px);background:#fff0f5;box-shadow:0 12px 28px #8766752b}
-.floating-contact-link>span{font-size:21px;font-weight:600;line-height:1.15}
-.floating-contact-link>small{font-size:8px;line-height:1.2;color:#9f8290}
-@media(max-width:620px){.floating-contact-dock{right:10px;bottom:calc(78px + env(safe-area-inset-bottom));gap:7px}.floating-contact-link{width:46px;min-height:46px;border-radius:15px}.floating-contact-link>span{font-size:19px}.floating-contact-link>small{font-size:7px}}
+
+/* Contact options are presented as discreet clickable rows. */
+.contact-row{cursor:pointer;transition:background .18s,transform .18s;border-radius:15px;padding:13px 10px;margin:0 -10px}
+.contact-row:hover{background:#fff5f8;transform:translateX(2px)}
+.contact-row:focus-visible{outline:2px solid var(--pink-strong);outline-offset:2px}
+.contact-copy small{color:#b49aa4;font-size:10px}
