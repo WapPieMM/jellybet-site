@@ -198,3 +198,25 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .moodboard-image-settings .image-preview-row{margin-top:-4px}
 .moodboard-image-settings .image-preview-row img{display:block;width:min(100%,320px);max-height:180px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff;padding:5px}
 .moodboard-image-settings .image-preview-row img[hidden]{display:none}
+
+/* Heart-based review rating */
+.optional-label{font-size:10px;font-weight:400;color:#a9959f}
+.rating-field{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:7px}
+.rating-field legend{padding:0;margin-bottom:2px;font-size:11px;color:#8d7883}
+.rating-field>small{font-size:10px;color:#a4949d}
+.rating-picker{display:flex;align-items:center;gap:7px}
+.rating-heart-button{display:grid;place-items:center;width:39px;height:39px;border:1px solid #f0dce4;border-radius:13px;background:#fff8fb;color:#c9b4bd;font-size:25px;line-height:1;cursor:pointer;transition:transform .16s,background .16s,color .16s,border-color .16s}
+.rating-heart-button:hover{transform:translateY(-2px);border-color:#d99bb4}
+.rating-heart-button.selected{background:#fff0f5;color:#d77e9e;border-color:#edc5d5}
+.rating-heart-button:focus-visible{outline:2px solid #d77e9e;outline-offset:2px}
+.review-hearts{color:#d77e9e;letter-spacing:2px}
+.admin-review-rating,.stars{color:#d77e9e}
+@media(max-width:600px){.rating-heart-button{width:36px;height:36px;font-size:23px}}
+/* Floating contact rail inspired by Sainty */
+.floating-contact-dock{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(86px + env(safe-area-inset-bottom));z-index:30;display:flex;flex-direction:column;gap:9px;align-items:center}
+.floating-contact-dock[hidden]{display:none}
+.floating-contact-link{width:54px;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #efdce4;border-radius:18px;background:#fffdfd;color:#bd7896;box-shadow:0 8px 24px #87667520;text-decoration:none;transition:transform .18s,box-shadow .18s,background .18s}
+.floating-contact-link:hover{transform:translateY(-3px);background:#fff0f5;box-shadow:0 12px 28px #8766752b}
+.floating-contact-link>span{font-size:21px;font-weight:600;line-height:1.15}
+.floating-contact-link>small{font-size:8px;line-height:1.2;color:#9f8290}
+@media(max-width:620px){.floating-contact-dock{right:10px;bottom:calc(78px + env(safe-area-inset-bottom));gap:7px}.floating-contact-link{width:46px;min-height:46px;border-radius:15px}.floating-contact-link>span{font-size:19px}.floating-contact-link>small{font-size:7px}}

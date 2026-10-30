@@ -66,6 +66,7 @@
       const href=linkFor(c.key,raw); const content=`<span class="contact-icon">${c.icon}</span><span class="contact-copy"><strong>${c.label}</strong><small>${escapeHtml(raw)}</small></span><span class="contact-arrow">↗</span>`;
       return href ? `<a class="contact-row" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${content}</a>` : `<div class="contact-row">${content}</div>`;
     }).filter(Boolean).join('') || '<div class="empty-state"><span>♡</span><p>ยังไม่ได้เพิ่มช่องทางติดต่อ</p><small>เจ้าของร้านสามารถเพิ่มข้อมูลได้จากหลังบ้าน</small></div>';
+    const dock=$('floatingContactDock');if(dock){dock.innerHTML=contactDefs.map(c=>{const raw=(settings[c.key]||'').trim();if(!raw)return '';const href=linkFor(c.key,raw);return href?'<a class="floating-contact-link" href="'+escapeHtml(href)+'" target="_blank" rel="noopener noreferrer" aria-label="ติดต่อทาง '+escapeHtml(c.label)+'" title="'+escapeHtml(c.label)+'"><span>'+c.icon+'</span><small>'+escapeHtml(c.label)+'</small></a>':'';}).join('');dock.hidden=!dock.innerHTML;}
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
     renderAccountEntryImageOptions();
@@ -123,6 +124,20 @@
     renderAccountEntryImageOptions();
     renderAccountEntryPreview();
   }
+  async function cleanupSoldAccountImages(){
+    if(!db||!currentUser)return;
+    try{
+      const cutoff=Date.now()-14*24*60*60*1000;
+      const {data:rows,error}=await db.from('accounts').select('id,image_url,status').eq('status','sold');if(error)throw error;
+      const soldByUrl=new Map((rows||[]).filter(a=>a.image_url).map(a=>[a.image_url,a]));if(!soldByUrl.size)return;
+      const {data:files,error:listError}=await db.storage.from('account-images').list('admin',{limit:1000,sortBy:{column:'created_at',order:'asc'}});if(listError)throw listError;
+      const expired=(files||[]).filter(file=>file.name&&file.created_at&&new Date(file.created_at).getTime()<=cutoff).map(file=>({path:'admin/'+file.name,url:db.storage.from('account-images').getPublicUrl('admin/'+file.name).data.publicUrl})).filter(file=>soldByUrl.has(file.url));
+      if(!expired.length)return;
+      const {error:removeError}=await db.storage.from('account-images').remove(expired.map(file=>file.path));if(removeError)throw removeError;
+      for(const file of expired){const account=soldByUrl.get(file.url);const {error:updateError}=await db.from('accounts').update({image_url:''}).eq('id',account.id).eq('status','sold');if(updateError)throw updateError;}
+      console.info('Cleaned up '+expired.length+' sold account image(s) older than 14 days.');
+    }catch(error){console.warn('Automatic sold-image cleanup skipped:',error.message);}
+  }
   async function refreshAccounts(){
     if(!db)return;
     const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});
@@ -139,7 +154,7 @@
     const published=reviews.filter(r=>r.published);
     $('statReviews').textContent=published.length; $('reviewCount').textContent=`${published.length} รีวิว`;
     $('statRating').textContent=published.length ? (published.reduce((n,r)=>n+Number(r.rating||5),0)/published.length).toFixed(1) : '—';
-    $('reviewList').innerHTML=published.length ? published.map(r=>`<article class="review-card card"><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars" aria-label="${Number(r.rating||5)} จาก 5 ดาว">${'★'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'☆'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" referrerpolicy="no-referrer"></a>`:''}</article>`).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
+    $('reviewList').innerHTML=published.length ? published.map(r=>`<article class="review-card card"><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars review-hearts" aria-label="${Number(r.rating||5)} จาก 5 หัวใจ">${'♥'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'♡'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" referrerpolicy="no-referrer"></a>`:''}</article>`).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
     renderAdminReviews();
   }
   async function loadPublic(){
@@ -161,7 +176,7 @@
   function renderAdminReviews(){
     const list=$('adminReviewList'); if(!list)return;
     if(!currentUser){list.innerHTML='';return;}
-    list.innerHTML=reviews.length ? reviews.map(r=>`<div class="admin-review-item"><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')} · ${'★'.repeat(Number(r.rating||5))}</strong><p>${escapeHtml(r.review_text||'')}</p><small>${r.published?'แสดงบนหน้าเว็บ':'ซ่อนอยู่'} · ${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH'):''}</small><div class="admin-item-actions"><button data-edit-review="${escapeHtml(r.id)}">แก้ไข</button><button data-toggle-review="${escapeHtml(r.id)}">${r.published?'ซ่อนรีวิว':'เผยแพร่'}</button><button class="danger" data-delete-review="${escapeHtml(r.id)}">ลบ</button></div></div>`).join('') : '<div class="empty-state"><p>ยังไม่มีรีวิว เพิ่มรีวิวแรกได้จากแบบฟอร์มด้านบน</p></div>';
+    list.innerHTML=reviews.length ? reviews.map(r=>`<div class="admin-review-item"><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')} · ${'♥'.repeat(Number(r.rating||5))}</strong><p>${escapeHtml(r.review_text||'')}</p><small>${r.published?'แสดงบนหน้าเว็บ':'ซ่อนอยู่'} · ${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH'):''}</small><div class="admin-item-actions"><button data-edit-review="${escapeHtml(r.id)}">แก้ไข</button><button data-toggle-review="${escapeHtml(r.id)}">${r.published?'ซ่อนรีวิว':'เผยแพร่'}</button><button class="danger" data-delete-review="${escapeHtml(r.id)}">ลบ</button></div></div>`).join('') : '<div class="empty-state"><p>ยังไม่มีรีวิว เพิ่มรีวิวแรกได้จากแบบฟอร์มด้านบน</p></div>';
   }
   $('accountForm')?.addEventListener('submit',async e=>{
     e.preventDefault();if(!db){setMessage('accountMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกรายการ',true);return;}
@@ -199,7 +214,7 @@
   $('loginForm').addEventListener('submit',async e=>{
     e.preventDefault(); if(!db){setMessage('loginMessage','ยังไม่ได้ตั้งค่า Supabase โปรดดู README.md',true);return;}
     const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('loginMessage','กำลังเข้าสู่ระบบ…');
-    try{const {data,error}=await db.auth.signInWithPassword({email:$('adminEmail').value.trim(),password:$('adminPassword').value});if(error)throw error;currentUser=data.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();setMessage('loginMessage','');}
+    try{const {data,error}=await db.auth.signInWithPassword({email:$('adminEmail').value.trim(),password:$('adminPassword').value});if(error)throw error;currentUser=data.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();await refreshAccounts();await cleanupSoldAccountImages();setMessage('loginMessage','');}
     catch(err){setMessage('loginMessage','เข้าสู่ระบบไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
   async function loadAdminSettings(){if(!db)return;const {data,error}=await db.from('site_settings').select('*').eq('id',1).maybeSingle();if(error){toast('อ่านข้อมูลหลังบ้านไม่สำเร็จ');return;}if(data){settings={...defaultSettings,...data};renderSettings();}}
@@ -231,12 +246,13 @@
   const customerFile=$('customerReviewImage');
   customerFile?.addEventListener('change',()=>previewFile(customerFile,$('customerReviewImagePreview')));
   function previewFile(input,img){const file=input?.files?.[0];if(!img)return;if(file){img.src=URL.createObjectURL(file);img.hidden=false;}else{img.removeAttribute('src');img.hidden=true;}}
+  $('customerReviewRatingPicker')?.addEventListener('click',e=>{const button=e.target.closest('[data-rating]');if(!button)return;const value=Number(button.dataset.rating);$('customerReviewRating').value=String(value);$('customerReviewRatingPicker').querySelectorAll('[data-rating]').forEach(item=>{const active=Number(item.dataset.rating)<=value;item.classList.toggle('selected',active);item.textContent=active?'♥':'♡';item.setAttribute('aria-checked',String(Number(item.dataset.rating)===value));});});
   $('customerReviewForm').addEventListener('submit',async e=>{
     e.preventDefault(); if(!db){setMessage('customerReviewMessage','ระบบยังไม่พร้อมรับรีวิว กรุณาลองใหม่ภายหลัง',true);return;}
     const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');btn.disabled=true;setMessage('customerReviewMessage','กำลังส่งรีวิว…');
     try{
       let image_url=null;const file=$('customerReviewImage').files[0];if(file)image_url=await uploadImage(file,'review-images','customer');
-      const payload={customer_name:$('customerReviewName').value.trim(),rating:Number($('customerReviewRating').value),review_text:$('customerReviewText').value.trim(),image_url,published:false};
+      const payload={customer_name:$('customerReviewName').value.trim()||'Anonymous',rating:Number($('customerReviewRating').value)||5,review_text:$('customerReviewText').value.trim(),image_url,published:false};
       const {error}=await db.from('reviews').insert(payload);if(error)throw error;
       form.reset();const prev=$('customerReviewImagePreview');if(prev){prev.hidden=true;prev.removeAttribute('src');}
       setMessage('customerReviewMessage','ส่งรีวิวแล้วค่ะ ♡ รอเจ้าของร้านตรวจสอบก่อนแสดงบนเว็บไซต์นะคะ');toast('ส่งรีวิวเรียบร้อยแล้ว ♡');
