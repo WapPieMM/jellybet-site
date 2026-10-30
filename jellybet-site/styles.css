@@ -298,3 +298,7 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 
 /* Highlight Account information labels: login method, email and phone */
 .account-detail-field-label{display:inline-flex;align-items:center;vertical-align:middle;margin:3px 6px 3px 0;padding:4px 10px;border:1px solid #f0c5d7;border-radius:999px;background:linear-gradient(110deg,#ffe5ef,#fff0f6);color:#a65378;font-size:.92em;font-weight:700;line-height:1.55;box-shadow:0 2px 7px rgba(190,119,151,.09)}
+
+/* Per-plan total: down payment plus remaining installment amount */
+.account-plan-total-preview{margin:0;padding:9px 11px;border:1px solid #efc6d7;border-radius:11px;background:#fff7fa;color:#a65378;font-size:11px;font-weight:700;line-height:1.6}
+.account-installment-grand-total{display:inline-block;margin-top:5px;padding:4px 9px;border:1px solid #efc6d7;border-radius:9px;background:linear-gradient(110deg,#ffe3ef,#fff0f6);color:#a65378;font-weight:700}
