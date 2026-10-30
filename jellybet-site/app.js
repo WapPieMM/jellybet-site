@@ -171,6 +171,7 @@
   }
   let siteMusic={title:'เพลงประจำร้าน',audio_url:'',enabled:false},musicStarted=false;
   const musicAudio=$('siteMusicAudio');
+  if(musicAudio)musicAudio.volume=0.5;
   function renderMusic(){
     if(!musicAudio)return;
     const player=$('musicPlayer'),toggle=$('musicToggle');
