@@ -63,10 +63,9 @@
     pill.lastElementChild.textContent = settings.status==='open' ? 'เปิดให้บริการ' : 'ปิดให้บริการ';
     $('contactList').innerHTML = contactDefs.map(c=>{
       const raw=(settings[c.key]||'').trim(); if(!raw) return '';
-      const href=linkFor(c.key,raw); const content=`<span class="contact-icon">${c.icon}</span><span class="contact-copy"><strong>${c.label}</strong><small>${escapeHtml(raw)}</small></span><span class="contact-arrow">↗</span>`;
-      return href ? `<a class="contact-row" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${content}</a>` : `<div class="contact-row">${content}</div>`;
+      const href=linkFor(c.key,raw); const content=`<span class="contact-icon">${c.icon}</span><span class="contact-copy"><strong>${c.label}</strong><small>แตะเพื่อเปิดช่องทางติดต่อ</small></span><span class="contact-arrow">↗</span>`;
+      return href ? `<a class="contact-row" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="เปิดช่องทางติดต่อ ${c.label}">${content}</a>` : `<div class="contact-row" aria-label="${c.label} ยังไม่ได้ตั้งค่าลิงก์">${content}</div>`;
     }).filter(Boolean).join('') || '<div class="empty-state"><span>♡</span><p>ยังไม่ได้เพิ่มช่องทางติดต่อ</p><small>เจ้าของร้านสามารถเพิ่มข้อมูลได้จากหลังบ้าน</small></div>';
-    const dock=$('floatingContactDock');if(dock){dock.innerHTML=contactDefs.map(c=>{const raw=(settings[c.key]||'').trim();if(!raw)return '';const href=linkFor(c.key,raw);return href?'<a class="floating-contact-link" href="'+escapeHtml(href)+'" target="_blank" rel="noopener noreferrer" aria-label="ติดต่อทาง '+escapeHtml(c.label)+'" title="'+escapeHtml(c.label)+'"><span>'+c.icon+'</span><small>'+escapeHtml(c.label)+'</small></a>':'';}).join('');dock.hidden=!dock.innerHTML;}
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
     renderAccountEntryImageOptions();
