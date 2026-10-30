@@ -64,7 +64,7 @@
     $('contactList').innerHTML = contactDefs.map((c,index)=>{
       const raw=(settings[c.key]||'').trim(); if(!raw) return '';
       const href=linkFor(c.key,raw);
-      const content=`<span class="contact-card-icon contact-icon-${c.key}">${c.icon}</span><span class="contact-card-copy"><strong>${c.label}</strong><small>แตะเพื่อพูดคุยกับร้าน</small></span><span class="contact-card-action">เปิดแชต <b>↗</b></span>`;
+      const content=`<span class="contact-card-icon contact-icon-${c.key}">${c.icon}</span><span class="contact-card-copy"><strong>${c.label}</strong><small>แตะเพื่อพูดคุยกับร้าน</small></span><span class="contact-card-action">เปิดแชต <b aria-hidden="true">↗</b></span>`;
       return href ? `<a class="contact-card-item" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="เปิดช่องทางติดต่อ ${c.label}">${content}</a>` : '';
     }).filter(Boolean).join('') || '<div class="empty-state"><span>♡</span><p>ยังไม่ได้เพิ่มช่องทางติดต่อ</p><small>เจ้าของร้านสามารถเพิ่มข้อมูลได้จากหลังบ้าน</small></div>';
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
