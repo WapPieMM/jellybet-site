@@ -23,7 +23,7 @@ create policy "Admins manage storefront music"
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('shop-music', 'shop-music', true, 15728640,
+values ('shop-music', 'shop-music', true, 52428800,
   array['audio/mpeg','audio/mp4','audio/aac','audio/ogg','audio/wav','audio/webm'])
 on conflict (id) do update set
   public = excluded.public,
