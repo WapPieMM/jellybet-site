@@ -294,3 +294,6 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .account-installment-details h2{font-size:14px;margin:0 0 12px;color:#765361}
 .account-installment-details .account-installment-note{margin-top:8px;padding-top:10px;border-top:1px solid #f0dce5}
 @media(max-width:420px){.account-installment-option{gap:17px;margin:12px 0 23px}.account-installment-option p{font-size:13px}}
+
+/* Highlight Account information labels: login method, email and phone */
+.account-detail-field-label{display:inline-flex;align-items:center;vertical-align:middle;margin:3px 6px 3px 0;padding:4px 10px;border:1px solid #f0c5d7;border-radius:999px;background:linear-gradient(110deg,#ffe5ef,#fff0f6);color:#a65378;font-size:.92em;font-weight:700;line-height:1.55;box-shadow:0 2px 7px rgba(190,119,151,.09)}
