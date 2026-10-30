@@ -11,6 +11,20 @@
   }).join('<br>');
  }
  const lineUrl=raw=>{const v=(raw||'').trim();if(!v)return '';if(/^https?:\/\//i.test(v))return v;return 'https://line.me/R/ti/p/~'+encodeURIComponent(v.replace(/^@/,''));};
+ const installmentPlanMarker='[[JELLYBET_INSTALLMENT_PLANS]]';
+ function renderInstallmentDetails(value){
+  const raw=String(value||'');if(!raw)return '';
+  if(raw.startsWith(installmentPlanMarker)){
+   const rest=raw.slice(installmentPlanMarker.length),end=rest.indexOf(']');
+   try{
+    const plans=JSON.parse(end>=0?rest.slice(0,end+1):rest);
+    const note=end>=0?rest.slice(end+1).trim().replace(/^\n/,''):'';
+    const cards=plans.map(plan=>'<article class="account-installment-option"><span class="account-installment-option-title">ผ่อน '+Number(plan.months||0)+' เดือน</span><p>= วางดาวน์ '+Number(plan.down||0).toLocaleString('th-TH')+'฿ ผ่อนต่ออีก '+Number(plan.total||0).toLocaleString('th-TH')+'<br>ส่งยอดทุกวีคละ '+Number(plan.weekly||0).toLocaleString('th-TH')+' ฿</p></article>').join('');
+    return '<section class="account-installment-details"><h2>รายละเอียดการผ่อน ≡</h2><div class="account-installment-options">'+cards+'</div>'+(note?'<p class="account-installment-note">'+formatAccountDescription(note)+'</p>':'')+'</section>';
+   }catch(error){console.warn('Could not parse installment plans',error);}
+  }
+  return '<section class="account-installment-details"><h2>รายละเอียดการผ่อน ≡</h2><p>'+formatAccountDescription(raw)+'</p></section>';
+ }
  async function load(){
   const content=$('accountPageContent'), id=decodeURIComponent(location.pathname.replace(/\/$/,'').split('/').pop()||'');
   if(!db){content.innerHTML='<div class="empty-state card"><p>ยังไม่ได้ตั้งค่าฐานข้อมูลค่ะ</p><a class="account-contact-button" href="/">กลับหน้าร้าน</a></div>';return;}
@@ -20,7 +34,8 @@
    if(!account){content.innerHTML='<div class="empty-state card"><span>୨୧</span><p>ไม่พบ Account รายการนี้</p><a class="account-contact-button" href="/">กลับไปดูรายการทั้งหมด</a></div>';return;}
    const sold=account.status==='sold', installment=account.status==='installment', contact=lineUrl(settings?.line);
    const image=account.image_url?'<img class="account-detail-image" src="'+esc(account.image_url)+'" alt="'+esc(account.title||'Account')+'">':'<div class="account-detail-image account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
-   content.innerHTML='<article class="account-detail-card card"><div class="account-detail-media">'+image+'</div><div class="account-detail-content"><span class="account-status '+(sold?'sold':installment?'installment':'available')+'">'+(sold?'ขายแล้ว':installment?'ติดผ่อน':'พร้อมขาย')+'</span><h1>'+esc(account.title||'Account')+'</h1><div class="account-detail-description">'+formatAccountDescription(account.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ')+'</div>'+(account.installment_details?'<section class="account-installment-details"><h2>รายละเอียดการผ่อน ♡</h2><p>'+formatAccountDescription(account.installment_details)+'</p></section>':'')+'<div class="account-detail-footer"><strong class="account-price">'+Number(account.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})+' <small>บาท</small></strong>'+(sold?'<span class="sold-note">รายการนี้ขายแล้ว ♡</span>':(contact?'<a class="account-contact-button" href="'+esc(contact)+'" target="_blank" rel="noopener noreferrer">สนใจรายการนี้ ↗</a>':'<a class="account-contact-button" href="/#contact">สนใจรายการนี้ ↗</a>'))+'</div></div></article>';
+   const installmentHtml=renderInstallmentDetails(account.installment_details||'');
+   content.innerHTML='<article class="account-detail-card card"><div class="account-detail-media">'+image+'</div><div class="account-detail-content"><span class="account-status '+(sold?'sold':installment?'installment':'available')+'">'+(sold?'ขายแล้ว':installment?'ติดผ่อน':'พร้อมขาย')+'</span><h1>'+esc(account.title||'Account')+'</h1><div class="account-detail-description">'+formatAccountDescription(account.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ')+'</div>'+installmentHtml+'<div class="account-detail-footer"><strong class="account-price">'+Number(account.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})+' <small>บาท</small></strong>'+(sold?'<span class="sold-note">รายการนี้ขายแล้ว ♡</span>':(contact?'<a class="account-contact-button" href="'+esc(contact)+'" target="_blank" rel="noopener noreferrer">สนใจรายการนี้ ↗</a>':'<a class="account-contact-button" href="/#contact">สนใจรายการนี้ ↗</a>'))+'</div></div></article>';
    document.title=(account.title||'รายละเอียด Account')+' ♡ jellybet';
   }catch(err){console.error(err);content.innerHTML='<div class="empty-state card"><p>โหลดรายละเอียดไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ</p><a class="account-contact-button" href="/">กลับหน้าร้าน</a></div>';}
  }
