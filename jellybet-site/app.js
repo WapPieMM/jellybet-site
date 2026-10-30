@@ -213,7 +213,7 @@
       let audio_url=siteMusic.audio_url||'';
       const file=$('musicFile').files[0];
       if(file){
-        if(file.size>15*1024*1024)throw new Error('ไฟล์เพลงต้องมีขนาดไม่เกิน 15 MB');
+        if(file.size>50*1024*1024)throw new Error('ไฟล์เพลงต้องมีขนาดไม่เกิน 50 MB');
         if(!file.type.startsWith('audio/'))throw new Error('กรุณาเลือกไฟล์เสียงเท่านั้น');
         const ext=(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'');
         const path='admin/store-music-'+Date.now()+'.'+ext;
