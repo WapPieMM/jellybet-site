@@ -256,3 +256,17 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .contact-card-action{font-size:8px}
 @media(max-width:390px){.contact-card-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.contact-card-item{min-height:105px;padding:9px 7px;gap:6px}.contact-card-icon{width:30px;height:30px;flex-basis:30px;font-size:15px}.contact-card-copy strong{font-size:10px}.contact-card-copy small{font-size:8px}.contact-card-action{font-size:7px}}
 @media(min-width:560px){.contact-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.contact-card-item{padding:12px}}
+
+
+/* Refined compact action arrows for contact and account cards, including iPad layouts */
+.contact-card-action{display:inline-flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.1px}
+.contact-card-action b{width:24px;height:24px;display:inline-grid;place-items:center;border:1px solid #efd5e0;border-radius:50%;background:linear-gradient(145deg,#fff,#fff0f5);color:#a96f89;font-size:14px;font-weight:600;line-height:1;box-shadow:0 2px 7px rgba(157,103,126,.09);transition:transform .2s ease,background .2s ease}
+.contact-card-item:hover .contact-card-action b{transform:translate(2px,-2px);background:#fceaf1}
+.account-entry-action{gap:10px}
+.account-entry-action>span{width:25px;height:25px;display:inline-grid;place-items:center;border:1px solid rgba(255,255,255,.45);border-radius:50%;background:rgba(255,255,255,.16);font-size:15px;line-height:1;transition:transform .2s ease}
+.account-entry-card:hover .account-entry-action>span{transform:translate(2px,-2px)}
+@media(min-width:700px) and (max-width:1100px){
+ .contact-card-action{gap:5px;font-size:9px}
+ .contact-card-action b{width:22px;height:22px;font-size:13px}
+ .account-entry-action{padding:10px 13px;font-size:10px}
+}
