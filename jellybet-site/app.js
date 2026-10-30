@@ -61,10 +61,11 @@
     const vanityPreview=$('moodVanityPreview');if(vanityPreview){vanityPreview.src=settings.mood_vanity_url||$('moodVanityImage')?.src||'';vanityPreview.hidden=!settings.mood_vanity_url;}
     const pill=$('statusPill'); pill.classList.toggle('is-open',settings.status==='open'); pill.classList.toggle('is-closed',settings.status!=='open');
     pill.lastElementChild.textContent = settings.status==='open' ? 'เปิดให้บริการ' : 'ปิดให้บริการ';
-    $('contactList').innerHTML = contactDefs.map(c=>{
+    $('contactList').innerHTML = contactDefs.map((c,index)=>{
       const raw=(settings[c.key]||'').trim(); if(!raw) return '';
-      const href=linkFor(c.key,raw); const content=`<span class="contact-icon">${c.icon}</span><span class="contact-copy"><strong>${c.label}</strong><small>แตะเพื่อเปิดช่องทางติดต่อ</small></span><span class="contact-arrow">↗</span>`;
-      return href ? `<a class="contact-row" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="เปิดช่องทางติดต่อ ${c.label}">${content}</a>` : `<div class="contact-row" aria-label="${c.label} ยังไม่ได้ตั้งค่าลิงก์">${content}</div>`;
+      const href=linkFor(c.key,raw);
+      const content=`<span class="contact-card-icon contact-icon-${c.key}">${c.icon}</span><span class="contact-card-copy"><strong>${c.label}</strong><small>แตะเพื่อพูดคุยกับร้าน</small></span><span class="contact-card-action">เปิดแชต <b>↗</b></span>`;
+      return href ? `<a class="contact-card-item" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="เปิดช่องทางติดต่อ ${c.label}">${content}</a>` : '';
     }).filter(Boolean).join('') || '<div class="empty-state"><span>♡</span><p>ยังไม่ได้เพิ่มช่องทางติดต่อ</p><small>เจ้าของร้านสามารถเพิ่มข้อมูลได้จากหลังบ้าน</small></div>';
     $('editShopName').value=settings.shop_name||''; $('editIntro').value=settings.intro||''; $('editHandle').value=settings.handle||''; $('editStatus').value=settings.status||'open';
     $('editLine').value=settings.line||''; $('editX').value=settings.x||''; $('editInstagram').value=settings.instagram||''; $('editFacebook').value=settings.facebook||'';
