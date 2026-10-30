@@ -270,3 +270,8 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
  .contact-card-action b{width:22px;height:22px;font-size:13px}
  .account-entry-action{padding:10px 13px;font-size:10px}
 }
+
+/* Arrow glyphs removed for consistent iPad rendering */
+.contact-card-action b,.account-entry-action>span{display:none!important}
+.contact-card-action{gap:0}
+.account-entry-action{gap:0}
