@@ -7,6 +7,8 @@
   return esc(value).split(/\n/).map(line=>{
    const match=line.match(/^\s*\*(.+?)\*\s*$/);
    if(match)return '<div class="account-highlight-line"><span>'+match[1]+'</span></div>';
+   const field=line.match(/^(ล็อกอินด้วย|อีเมล|เบอร์):\s*(.*)$/);
+   if(field)return '<span class="account-detail-field-label">'+field[1]+'</span> '+field[2];
    return line||'';
   }).join('<br>');
  }
