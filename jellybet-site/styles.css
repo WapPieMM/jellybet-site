@@ -574,3 +574,10 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
  .mood-photo,.mood-photo-vanity{transform:none}
  .dream-reveal,html.dream-motion-ready .dream-reveal:not(.is-visible),html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:none;transition:none}
 }
+
+
+/* Random coquette accents on customer review cards */
+.review-card:after{content:none!important}
+.review-decoration{position:absolute;top:10px;right:15px;z-index:0;pointer-events:none;color:rgba(203,143,169,.2);font-size:27px;line-height:1;opacity:.8;transform:rotate(-9deg)}
+.review-card .review-top,.review-card .review-text,.review-card .review-image{position:relative;z-index:1}
+@media(prefers-reduced-motion:reduce){.review-decoration{transform:none}}
