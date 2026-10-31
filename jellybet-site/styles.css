@@ -324,7 +324,7 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 .portfolio-drive-sparkle-one{top:12px;right:24px;font-size:22px}
 .portfolio-drive-sparkle-two{bottom:13px;left:14px;font-size:15px;opacity:.72}
 .portfolio-drive-emblem{position:relative;display:flex;flex:0 0 72px;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:72px;height:72px;border:1px solid #edcfdb;border-radius:23px;background:linear-gradient(145deg,#fff 0%,#fff0f6 100%);box-shadow:0 5px 13px rgba(184,119,147,.12),inset 0 0 0 3px rgba(255,255,255,.8);transform:rotate(-3deg)}
-.portfolio-drive-folder{display:grid;place-items:center;width:39px;height:31px;border:1px solid #e7b8cb;border-radius:8px 9px 10px 10px;background:linear-gradient(145deg,#f8d9e5,#eabbd0);color:#fff;font-size:21px;line-height:1;box-shadow:0 3px 7px rgba(184,119,147,.16)}
+.portfolio-drive-heart{display:grid;place-items:center;width:43px;height:39px;color:#d98eac;font-family:Georgia,serif;font-size:39px;line-height:1;text-shadow:0 3px 7px rgba(184,119,147,.2);filter:drop-shadow(0 1px 0 rgba(255,255,255,.9));transform:rotate(-7deg);transition:transform .2s ease,color .2s ease}.portfolio-drive-card:hover .portfolio-drive-heart{color:#c9799c;transform:rotate(5deg) scale(1.08)}
 .portfolio-drive-emblem small{font:700 6px 'DM Sans',sans-serif;letter-spacing:1px;color:#b27c93}
 .portfolio-drive-copy{position:relative;z-index:1}
 .portfolio-drive-kicker{display:inline-flex;align-items:center;margin:0 0 5px;padding:4px 9px;border:1px solid #f0d7e1;border-radius:999px;background:rgba(255,255,255,.76);color:#b27c93;font:700 8px 'DM Sans',sans-serif;letter-spacing:1.45px}
@@ -337,7 +337,7 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
  .portfolio-drive-card{gap:11px;padding:17px 13px;border-radius:21px}
  .portfolio-drive-card:before{inset:6px;border-radius:16px}
  .portfolio-drive-emblem{flex-basis:52px;width:52px;height:58px;border-radius:17px}
- .portfolio-drive-folder{width:31px;height:25px;font-size:17px}
+ .portfolio-drive-heart{width:34px;height:32px;font-size:32px}
  .portfolio-drive-emblem small{font-size:5px;letter-spacing:.6px}
  .portfolio-drive-kicker{font-size:6px;letter-spacing:.9px;padding:3px 7px}
  .portfolio-drive-copy h2{font-size:15px}
