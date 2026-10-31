@@ -302,3 +302,16 @@ body{background-color:var(--page-bg,#fffaf4)!important;color:var(--ink)}.card,.w
 /* Per-plan total: down payment plus remaining installment amount */
 .account-plan-total-preview{margin:0;padding:9px 11px;border:1px solid #efc6d7;border-radius:11px;background:#fff7fa;color:#a65378;font-size:11px;font-weight:700;line-height:1.6}
 .account-installment-grand-total{display:inline-block;margin-top:5px;padding:4px 9px;border:1px solid #efc6d7;border-radius:9px;background:linear-gradient(110deg,#ffe3ef,#fff0f6);color:#a65378;font-weight:700}
+
+/* Clickable Google Drive portfolio card replacing the welcome panel */
+.portfolio-drive-card{display:flex;align-items:center;gap:15px;margin:16px 0;padding:20px;text-decoration:none;color:inherit;border:1px solid #efd9e2;border-radius:23px;background:linear-gradient(120deg,#fffdfb 0%,#fff0f6 58%,#fcebf2 100%);box-shadow:0 8px 24px rgba(157,103,126,.08);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.portfolio-drive-card[hidden]{display:none}
+.portfolio-drive-card:hover{transform:translateY(-2px);border-color:#e7bfd0;box-shadow:0 12px 28px rgba(157,103,126,.13)}
+.portfolio-drive-card:focus-visible{outline:2px solid var(--pink-strong);outline-offset:3px}
+.portfolio-drive-flower{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:1px solid #f0dce5;border-radius:16px;background:#fff;color:#b87993;font-size:24px}
+.portfolio-drive-copy{flex:1;min-width:0}
+.portfolio-drive-copy .eyebrow{margin:0 0 4px;font-size:9px;letter-spacing:1.7px}
+.portfolio-drive-copy h2{margin:0 0 5px;color:#8c6274;font-size:clamp(17px,3.7vw,22px);line-height:1.35}
+.portfolio-drive-copy>p:last-child{margin:0;color:#927d86;font-size:11px;line-height:1.75}
+.portfolio-drive-action{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(255,255,255,.7);border-radius:999px;background:linear-gradient(135deg,#d99ab2,#bd809a);color:#fff;font-size:10px;font-weight:600;white-space:nowrap;box-shadow:0 4px 12px rgba(157,103,126,.14)}
+@media(max-width:520px){.portfolio-drive-card{gap:10px;padding:14px 12px;border-radius:19px}.portfolio-drive-flower{flex-basis:39px;width:39px;height:39px;border-radius:13px;font-size:20px}.portfolio-drive-copy .eyebrow{font-size:7px;letter-spacing:1px}.portfolio-drive-copy h2{font-size:16px}.portfolio-drive-copy>p:last-child{font-size:10px;line-height:1.6}.portfolio-drive-action{padding:9px 10px;font-size:9px}}
