@@ -43,11 +43,15 @@
         <figure class="mood-photo mood-photo-vanity"><img id="moodVanityImage" src="assets/coquette-vanity.jpeg" alt="มุมโต๊ะเครื่องแป้งโทนชมพูวินเทจและไข่มุก" loading="lazy"><figcaption>pretty little things</figcaption></figure>
       </section>
 
-      <section class="welcome-card card">
-        <span class="tiny-flower">୨୧</span>
-        <h2>hello, lovely ♡</h2>
-        <p>เช็กเครดิต รีวิว และช่องทางติดต่อร้านได้ที่นี่เลยค่ะ</p>
-      </section>
+      <a class="portfolio-drive-card card" id="portfolioDriveCard" href="#" target="_blank" rel="noopener noreferrer" aria-label="เปิดชมผลงานเว็บไซต์บน Google Drive" hidden>
+        <span class="portfolio-drive-flower" aria-hidden="true">୨୧</span>
+        <div class="portfolio-drive-copy">
+          <p class="eyebrow">PORTFOLIO &amp; SERVICES</p>
+          <h2>ชมผลงานเว็บไซต์</h2>
+          <p>รวมตัวอย่างเว็บไซต์ที่ออกแบบและพัฒนา พร้อมรายละเอียดบริการรับออกแบบเว็บไซต์</p>
+        </div>
+        <span class="portfolio-drive-action">เปิดดูผลงาน</span>
+      </a>
 
       <a class="account-entry-card card" href="/accounts">
         <div class="account-entry-preview" id="accountEntryPreview" aria-label="ตัวอย่างรูป Account" hidden></div>
@@ -114,6 +118,7 @@
             <label>ชื่อร้าน<input id="editShopName" required maxlength="60"></label>
             <label>ข้อความแนะนำร้าน<textarea id="editIntro" rows="3" maxlength="500"></textarea></label>
             <label>ชื่อบัญชี/แฮนเดิลที่แสดง<input id="editHandle" maxlength="100" placeholder="เช่น @jellybet"></label>
+            <label>ลิงก์ Google Drive สำหรับ Portfolio<input id="editPortfolioDriveUrl" type="url" inputmode="url" placeholder="https://drive.google.com/drive/folders/..."></label><small class="upload-note">วางลิงก์แชร์โฟลเดอร์ผลงานหรือไฟล์ตัวอย่างจาก Google Drive การ์ด Portfolio จะแสดงหน้าแรกเมื่อตั้งค่าลิงก์นี้</small>
             <label>รูปโปรไฟล์ร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopAvatarFile" type="file" accept="image/*"></label><div class="image-preview-row"><img id="shopAvatarPreview" alt="ตัวอย่างรูปโปรไฟล์" hidden></div>
             <label>รูปปก/ภาพพื้นหลังร้าน (อัปโหลดจากเครื่อง/มือถือ)<input id="shopCoverFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><small class="upload-note">รองรับ JPG, PNG, WEBP และ GIF (ภาพเคลื่อนไหว) ขนาดไม่เกิน 5 MB</small><div class="image-preview-row"><img id="shopCoverPreview" alt="ตัวอย่างรูปปก" hidden></div>
             <div class="moodboard-image-settings">
