@@ -401,7 +401,7 @@ body{
 .hero:hover{box-shadow:0 25px 62px rgba(153,100,125,.15),inset 0 1px 0 #fff}
 .hero:before{right:25px;top:13px;color:rgba(207,140,168,.48);font-size:80px;text-shadow:0 9px 20px rgba(191,128,153,.13);animation:dream-float 7s ease-in-out infinite}
 .hero:after{right:56px;bottom:21px;color:rgba(206,139,166,.48);font-size:75px;text-shadow:0 8px 20px rgba(191,128,153,.13);animation:dream-float 8s ease-in-out -2s infinite}
-.hero>*:not(.hero-float){position:relative;z-index:2}
+.hero>*:not(.hero-float):not(.hero-flower){position:relative;z-index:2}
 .hero .eyebrow{color:#ad7a90;letter-spacing:2.5px}
 .hero h1{font-size:clamp(42px,10vw,58px);letter-spacing:-2.4px;color:#6e4d5d;text-shadow:0 4px 18px rgba(181,121,149,.13);transform:translateZ(22px)}
 .hero h1 span{color:#cc8da7}
@@ -411,6 +411,7 @@ body{
 .hero-decoration span:nth-child(2){padding:6px 13px;border:1px solid rgba(224,184,201,.55);border-radius:999px;background:rgba(255,255,255,.5);font-size:9px}
 .hero-flower{z-index:2;text-shadow:0 6px 12px rgba(194,132,158,.14);animation:dream-turn 18s linear infinite}
 .hero-float{position:absolute;pointer-events:none;z-index:1;will-change:transform}
+.hero-float,.hero-flower{translate:var(--hero-pointer-x,0px) var(--hero-pointer-y,0px)}
 .hero-float-pearl{width:66px;height:66px;right:24%;top:23%;border-radius:50%;border:1px solid rgba(255,255,255,.95);background:radial-gradient(circle at 31% 25%,#fff 0 8%,#fff9fb 22%,#f4d9e5 56%,#e8c4d4 74%,#fff9fc 100%);box-shadow:inset -8px -8px 17px rgba(174,121,148,.13),0 12px 27px rgba(176,119,147,.17);animation:dream-float 6.5s ease-in-out infinite}
 .hero-float-bow{right:12%;top:48%;font-size:34px;color:rgba(188,119,150,.68);text-shadow:0 8px 18px rgba(176,119,147,.18);animation:dream-float 7.5s ease-in-out -1.5s infinite}
 .hero-float-heart{right:37%;bottom:15%;font:34px Georgia,serif;color:rgba(217,147,174,.56);text-shadow:0 6px 14px rgba(176,119,147,.16);animation:dream-float 8s ease-in-out -3s infinite}
