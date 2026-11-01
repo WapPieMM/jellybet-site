@@ -23,6 +23,12 @@
     return new Date(parts[0], parts[1]-1, parts[2]).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'numeric'});
   };
   const selectedMonth = () => $('accountingMonth').value || START_DATE.slice(0,7);
+  const bangkokDate = value => {
+    if (!value) return '';
+    const parts = new Intl.DateTimeFormat('en-US', {timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value));
+    const part = type => parts.find(item => item.type === type).value;
+    return part('year') + '-' + part('month') + '-' + part('day');
+  };
   const monthBounds = month => {
     const parts = month.split('-').map(Number);
     const start = month + '-01';
@@ -135,8 +141,8 @@
   function getPendingImports() {
     const linked = new Set(entries.map(entry => String(entry.source_account_id)));
     const unlinked = accounts.filter(account => !linked.has(String(account.id)));
-    const carryovers = unlinked.filter(account => account.status === 'installment' && (!account.sale_started_at || String(account.sale_started_at).slice(0,10) < START_DATE));
-    const newSales = unlinked.filter(account => ['installment','sold'].includes(account.status) && account.sale_started_at && String(account.sale_started_at).slice(0,10) >= START_DATE);
+    const carryovers = unlinked.filter(account => account.status === 'installment' && (!account.sale_started_at || bangkokDate(account.sale_started_at) < START_DATE));
+    const newSales = unlinked.filter(account => ['installment','sold'].includes(account.status) && account.sale_started_at && bangkokDate(account.sale_started_at) >= START_DATE);
     return {carryovers, newSales};
   }
 
@@ -144,14 +150,14 @@
     const plans = parsePlans(account.installment_details);
     const planOptions = plans.map((plan,index) => '<option value="' + index + '">' + escapeHtml('ผ่อน ' + Number(plan.months || 0) + ' เดือน · ดาวน์ ' + Number(plan.down || 0).toLocaleString('th-TH') + ' · ผ่อน ' + Number(plan.total || 0).toLocaleString('th-TH')) + '</option>').join('');
     const planControl = plans.length ? '<label>แผนผ่อนที่ใช้จริง<select data-import-plan>' + planOptions + '</select></label>' : '<p class="accounting-import-hint">ไม่พบตัวเลือกแผนผ่อนที่บันทึกไว้ใน Account</p>';
-    const saleDate = carryover ? START_DATE : String(account.sale_started_at).slice(0,10);
+    const saleDate = carryover ? START_DATE : bangkokDate(account.sale_started_at);
     const firstPlan = plans[0] || {};
     const saleValue = plans.length && !carryover && account.status === 'installment' ? Number(firstPlan.down || 0) + Number(firstPlan.total || 0) : Number(account.price || 0);
     const receivedDefault = carryover ? 0 : account.status === 'installment' ? Number(firstPlan.down || 0) : Number(account.price || 0);
     return '<article class="accounting-import-card card" data-import-card data-account-id="' + account.id + '" data-carryover="' + String(carryover) + '">' +
       '<div class="accounting-import-card-head"><div><span class="accounting-candidate-tag">' + (carryover ? 'ยอดยกมาเดิม' : account.status === 'installment' ? 'เริ่มผ่อนใหม่' : 'ขายใหม่') + '</span><h4>' + escapeHtml(account.title || 'Account #' + account.id) + '</h4><small>ราคาใน Account ' + money(account.price) + ' · ' + (carryover ? 'วันเริ่มต้นบัญชี ' + formatDate(START_DATE) : 'วันที่เริ่มขาย ' + formatDate(saleDate)) + '</small></div><span class="accounting-account-id">#' + escapeHtml(account.id) + '</span></div>' +
       planControl +
-      '<div class="accounting-import-fields"><label>' + (carryover ? 'ยอดคงเหลือ ณ 1 พ.ย. 2569' : 'ยอดขายจริง (บาท)') + '<input type="number" min="0" step="0.01" data-import-sale value="' + saleValue + '" required></label>' +
+      '<div class="accounting-import-fields"><label>' + (carryover ? 'ราคาขายเดิมตามข้อมูล Account (บาท)' : 'ยอดขายจริง (บาท)') + '<input type="number" min="0" step="0.01" data-import-sale value="' + saleValue + '" required></label>' +
       '<label>ต้นทุนไอดี (บาท)<input type="number" min="0" step="0.01" data-import-cost value="0" required></label>' +
       (carryover ? '<label>ยอดค้างตั้งต้น (บาท)<input type="number" min="0" step="0.01" data-import-opening placeholder="กรอกยอดคงเหลือจริง" required></label>' :
         '<label>เงินที่รับแล้ว ณ วันเริ่มขาย (บาท)<input type="number" min="0" step="0.01" data-import-received value="' + receivedDefault + '" required></label>') +
@@ -225,7 +231,7 @@
     const payload = {
       source_account_id: account.id,
       account_title: account.title || 'Account #' + account.id,
-      sale_date: carryover ? START_DATE : String(account.sale_started_at).slice(0,10),
+      sale_date: carryover ? START_DATE : bangkokDate(account.sale_started_at),
       sale_amount: saleInput,
       cost_amount: costAmount,
       opening_balance: carryover ? Number(card.querySelector('[data-import-opening]').value) : saleInput,
