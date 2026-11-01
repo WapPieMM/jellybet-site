@@ -187,7 +187,7 @@
     const results = await Promise.all([
       db.from('accounting_entries').select('*').order('sale_date', {ascending:false}),
       db.from('accounting_payments').select('*').order('paid_on', {ascending:false}),
-      db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,created_at').order('created_at', {ascending:false})
+      db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false})
     ]);
     const issue = results.find(result => result.error);
     if (issue) throw issue.error;
