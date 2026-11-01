@@ -2,6 +2,17 @@
 alter table public.accounts
   add column if not exists sale_started_at timestamptz;
 
+alter table public.accounts
+  add column if not exists accounting_carryover boolean not null default false;
+
+-- Freeze the set of pre-launch installment accounts so they remain importable
+-- as opening balances even if their storefront status changes after launch.
+update public.accounts
+set accounting_carryover = true
+where status = 'installment'
+  and sale_started_at is null
+  and accounting_carryover = false;
+
 create table if not exists public.accounting_entries (
   id uuid primary key default gen_random_uuid(),
   source_account_id bigint references public.accounts(id) on delete set null,
