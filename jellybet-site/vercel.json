@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/accounting",
+      "destination": "/accounting.html"
+    },
+    {
       "source": "/accounts",
       "destination": "/accounts.html"
     },
