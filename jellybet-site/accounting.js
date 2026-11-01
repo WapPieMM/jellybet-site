@@ -158,7 +158,7 @@
       '<div class="accounting-import-card-head"><div><span class="accounting-candidate-tag">' + (carryover ? 'ยอดยกมาเดิม' : account.status === 'installment' ? 'เริ่มผ่อนใหม่' : 'ขายใหม่') + '</span><h4>' + escapeHtml(account.title || 'Account #' + account.id) + '</h4><small>ราคาใน Account ' + money(account.price) + ' · ' + (carryover ? 'วันเริ่มต้นบัญชี ' + formatDate(START_DATE) : 'วันที่เริ่มขาย ' + formatDate(saleDate)) + '</small></div><span class="accounting-account-id">#' + escapeHtml(account.id) + '</span></div>' +
       planControl +
       '<div class="accounting-import-fields"><label>' + (carryover ? 'ราคาขายเดิมตามข้อมูล Account (บาท)' : 'ยอดขายจริง (บาท)') + '<input type="number" min="0" step="0.01" data-import-sale value="' + saleValue + '" required></label>' +
-      '<label>ต้นทุนไอดี (บาท)<input type="number" min="0" step="0.01" data-import-cost value="0" required></label>' +
+      '<label>ต้นทุนไอดี (บาท)<input type="number" min="0" step="0.01" data-import-cost value="' + Number(account.acquisition_cost || 0) + '" required></label>' +
       (carryover ? '<label>ยอดค้างตั้งต้น (บาท)<input type="number" min="0" step="0.01" data-import-opening placeholder="กรอกยอดคงเหลือจริง" required></label>' :
         '<label>เงินที่รับแล้ว ณ วันเริ่มขาย (บาท)<input type="number" min="0" step="0.01" data-import-received value="' + receivedDefault + '" required></label>') +
       '<label>ยอดส่งต่อสัปดาห์ (บาท)<input type="number" min="0" step="0.01" data-import-weekly value="' + Number(firstPlan.weekly || 0) + '"></label></div>' +
@@ -187,13 +187,18 @@
     const results = await Promise.all([
       db.from('accounting_entries').select('*').order('sale_date', {ascending:false}),
       db.from('accounting_payments').select('*').order('paid_on', {ascending:false}),
-      db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false})
+      db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false}),
+      db.from('account_private_financials').select('account_id,acquisition_cost')
     ]);
     const issue = results.find(result => result.error);
     if (issue) throw issue.error;
     entries = results[0].data || [];
     payments = results[1].data || [];
-    accounts = results[2].data || [];
+    const savedCosts = new Map((results[3].data || []).map(row => [String(row.account_id), Number(row.acquisition_cost)]));
+    accounts = (results[2].data || []).map(account => ({
+      ...account,
+      acquisition_cost: savedCosts.has(String(account.id)) ? savedCosts.get(String(account.id)) : 0
+    }));
     renderAll();
     setMessage('');
   }
