@@ -141,7 +141,7 @@
   function getPendingImports() {
     const linked = new Set(entries.map(entry => String(entry.source_account_id)));
     const unlinked = accounts.filter(account => !linked.has(String(account.id)));
-    const carryovers = unlinked.filter(account => account.status === 'installment' && (!account.sale_started_at || bangkokDate(account.sale_started_at) < START_DATE));
+    const carryovers = unlinked.filter(account => account.accounting_carryover === true || (account.status === 'installment' && (!account.sale_started_at || bangkokDate(account.sale_started_at) < START_DATE)));
     const newSales = unlinked.filter(account => ['installment','sold'].includes(account.status) && account.sale_started_at && bangkokDate(account.sale_started_at) >= START_DATE);
     return {carryovers, newSales};
   }
