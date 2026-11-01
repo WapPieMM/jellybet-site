@@ -583,3 +583,65 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
 @media(prefers-reduced-motion:reduce){.review-decoration{transform:none}}
 
 .review-decoration-left{left:5px;right:auto;top:3px;font-size:13px;opacity:.68;transform:rotate(-12deg)}
+
+
+/* Account uploads: preserve the original photo proportions */
+.account-card > .account-image,
+.accounts-page-grid .account-card > .account-image{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:auto;
+  object-fit:contain;
+  object-position:center;
+  background:#fffafd;
+}
+.account-card > .account-image-placeholder,
+.accounts-page-grid .account-card > .account-image-placeholder{
+  width:100%;
+  aspect-ratio:4/3;
+}
+
+/* The account detail frame follows the uploaded image instead of forcing 4:3 */
+.account-detail-card{align-items:start}
+.account-detail-media{
+  align-self:start;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-width:0;
+  height:auto;
+}
+.account-detail-image:not(.account-image-placeholder){
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  min-height:0;
+  max-height:none;
+  aspect-ratio:auto;
+  object-fit:contain;
+  object-position:center;
+  background:#fffafd;
+}
+.account-detail-image.account-image-placeholder{
+  display:flex;
+  width:100%;
+  height:auto;
+  min-height:220px;
+  max-height:none;
+  aspect-ratio:4/3;
+}
+
+@media(min-width:680px){
+  .account-detail-card{align-items:start}
+  .account-detail-media{height:auto;align-self:start}
+  .account-detail-image:not(.account-image-placeholder){
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:auto;
+  }
+}
