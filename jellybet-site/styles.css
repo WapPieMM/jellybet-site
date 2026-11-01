@@ -785,3 +785,6 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
  .accounting-due{font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){.accounting-tab{transition:none}}
+
+/* Internal-only acquisition cost shown in the authenticated admin Account list. */
+.admin-account-cost{color:var(--muted);font-size:12px;margin:2px 0 0}
