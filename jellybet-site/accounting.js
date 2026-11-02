@@ -138,6 +138,7 @@
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small></div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดขาย <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ส่งยอด/สัปดาห์ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
@@ -305,6 +306,70 @@
     setMessage('นำเข้า ' + payload.account_title + ' เข้าระบบบัญชีแล้ว ♡');
   }
 
+  function openEntryEditDialog(entryId) {
+    const entry = entryById(entryId);
+    if (!entry) return;
+    $('editAccountingEntryId').value = entry.id;
+    $('accountingEntryEditTitle').textContent = entry.account_title;
+    $('editAccountingSaleDate').value = entry.sale_date || START_DATE;
+    $('editAccountingSaleAmount').value = Number(entry.sale_amount || 0);
+    $('editAccountingCostAmount').value = Number(entry.cost_amount || 0);
+    $('editAccountingOpeningBalance').value = Number(entry.opening_balance || 0);
+    $('editAccountingWeeklyAmount').value = Number(entry.weekly_amount || 0);
+    $('editAccountingDueWeekday').value = entry.installment_due_weekday == null ? '' : String(entry.installment_due_weekday);
+    $('editAccountingNotes').value = entry.notes || '';
+    $('accountingEntryEditMessage').textContent = '';
+    $('accountingEntryEditDialog').showModal();
+  }
+
+  $('accountingEntryEditForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const id = $('editAccountingEntryId').value;
+    const entry = entryById(id);
+    if (!entry) {
+      $('accountingEntryEditMessage').textContent = 'ไม่พบรายการบัญชี กรุณาโหลดหน้าใหม่';
+      return;
+    }
+    const saleAmount = Number($('editAccountingSaleAmount').value);
+    const costAmount = Number($('editAccountingCostAmount').value);
+    const openingBalance = Number($('editAccountingOpeningBalance').value);
+    const weeklyAmount = Number($('editAccountingWeeklyAmount').value || 0);
+    if (![saleAmount,costAmount,openingBalance,weeklyAmount].every(Number.isFinite) ||
+        saleAmount < 0 || costAmount < 0 || openingBalance < 0 || weeklyAmount < 0) {
+      $('accountingEntryEditMessage').textContent = 'กรุณาตรวจสอบตัวเลขให้ถูกต้องและไม่ติดลบ';
+      return;
+    }
+    if (totalPaid(id) > openingBalance + 0.001) {
+      $('accountingEntryEditMessage').textContent = 'ยอดตั้งต้นต้องไม่น้อยกว่าเงินที่รับไปแล้ว (' + money(totalPaid(id)) + ')';
+      return;
+    }
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const {error} = await db.from('accounting_entries').update({
+        sale_date: $('editAccountingSaleDate').value,
+        sale_amount: saleAmount,
+        cost_amount: costAmount,
+        opening_balance: openingBalance,
+        weekly_amount: weeklyAmount,
+        installment_due_weekday: $('editAccountingDueWeekday').value === '' ? null : Number($('editAccountingDueWeekday').value),
+        notes: $('editAccountingNotes').value.trim(),
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+      if (error) throw error;
+      $('accountingEntryEditDialog').close();
+      await loadData();
+      setMessage('แก้ไขข้อมูลบัญชีเรียบร้อยแล้ว และคำนวณยอดค้างใหม่ ♡');
+    } catch (error) {
+      $('accountingEntryEditMessage').textContent = 'แก้ไขไม่สำเร็จ: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('accountingEntryEditDialog').querySelector('#closeAccountingEntryEdit').addEventListener('click', () => $('accountingEntryEditDialog').close());
+  $('accountingEntryEditDialog').querySelector('#cancelAccountingEntryEdit').addEventListener('click', () => $('accountingEntryEditDialog').close());
+
   function openPaymentDialog(entryId) {
     const entry = entryById(entryId);
     if (!entry) return;
@@ -399,6 +464,8 @@
       finally { importButton.disabled = false; importButton.textContent = 'นำเข้าบัญชีรายการนี้'; }
       return;
     }
+    const editEntryButton = event.target.closest('[data-edit-entry]');
+    if (editEntryButton) { openEntryEditDialog(editEntryButton.dataset.editEntry); return; }
     const recordButton = event.target.closest('[data-record-payment]');
     if (recordButton) { openPaymentDialog(recordButton.dataset.recordPayment); return; }
     const historyButton = event.target.closest('[data-toggle-history]');
