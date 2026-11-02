@@ -153,7 +153,7 @@
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่อรอบ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
-        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + ((entry.installment_schedule_type||entry.installment_due_weekday!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
@@ -566,6 +566,8 @@
           cost_amount: netCost,
           weekly_amount: 0,
           installment_due_weekday: null,
+          installment_schedule_type: 'weekly',
+          installment_due_date: null,
           notes: [entry.notes, 'ปิดรอบ: ลูกค้าหลุดผ่อน; เงินรับรวม ' + received + ' บาท; ต้นทุนสุทธิหลังหักเงินรับ ' + netCost + ' บาท; กำไร ' + profit + ' บาท'].filter(Boolean).join(' | '),
           source_account_id: null,
           updated_at: new Date().toISOString()
@@ -576,6 +578,9 @@
         const {error:financialError} = await db.from('account_private_financials').update({
           accounting_handoff_at:null,
           actual_sale_price:null,
+          installment_due_weekday:null,
+          installment_schedule_type:'weekly',
+          installment_due_date:null,
           updated_at:new Date().toISOString()
         }).eq('account_id',entry.source_account_id);
         if (financialError) throw financialError;
