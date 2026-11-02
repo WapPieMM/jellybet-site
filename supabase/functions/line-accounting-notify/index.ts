@@ -25,11 +25,19 @@ function bangkokToday(): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-function dueDateForWeekday(today: string, weekday: number): string {
+function scheduledDateForToday(today: string, scheduleType: string, weekday: number | null, anchor: string | null): string {
   const date = new Date(`${today}T00:00:00Z`);
-  const daysBack = (date.getUTCDay() - weekday + 7) % 7;
-  date.setUTCDate(date.getUTCDate() - daysBack);
-  return date.toISOString().slice(0, 10);
+  if (scheduleType === 'weekly') {
+    if (weekday === null) return '';
+    const daysBack = (date.getUTCDay() - weekday + 7) % 7;
+    date.setUTCDate(date.getUTCDate() - daysBack);
+    return date.toISOString().slice(0, 10);
+  }
+  if (!anchor || anchor > today) return '';
+  const interval = scheduleType === 'every_other_day' ? 2 : 1;
+  const anchorDate = new Date(`${anchor}T00:00:00Z`);
+  const elapsed = Math.floor((date.getTime() - anchorDate.getTime()) / 86400000);
+  return elapsed % interval === 0 ? today : '';
 }
 
 function money(value: number): string {
@@ -95,8 +103,7 @@ async function handleDailyReminder(req: Request): Promise<Response> {
   const today = bangkokToday();
   const { data: entries, error: entriesError } = await supabase
     .from("accounting_entries")
-    .select("id, account_title, opening_balance, weekly_amount, installment_due_weekday")
-    .not("installment_due_weekday", "is", null);
+    .select("id, account_title, opening_balance, weekly_amount, installment_due_weekday, installment_schedule_type, installment_due_date");
   if (entriesError) {
     console.error("Could not read accounting entries:", entriesError.message);
     return json({ error: "Could not read accounting entries" }, 500);
@@ -118,10 +125,11 @@ async function handleDailyReminder(req: Request): Promise<Response> {
     const entryPayments = payments.filter((payment) => payment.entry_id === entry.id);
     const paid = entryPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const remaining = Math.max(0, Number(entry.opening_balance || 0) - paid);
-    const dueDate = dueDateForWeekday(today, Number(entry.installment_due_weekday));
-    const alreadyPaidThisCycle = entryPayments.some((payment) => payment.paid_on >= dueDate);
+    const scheduleType = entry.installment_schedule_type || 'weekly';
+    const dueDate = scheduledDateForToday(today, scheduleType, entry.installment_due_weekday == null ? null : Number(entry.installment_due_weekday), entry.installment_due_date);
+    const alreadyPaidThisCycle = !!dueDate && entryPayments.some((payment) => payment.paid_on >= dueDate);
     const dueAmount = Math.min(Math.max(0, Number(entry.weekly_amount || 0)), remaining);
-    return { title: entry.account_title, remaining, dueAmount, due: dueDate === today && !alreadyPaidThisCycle && remaining > 0.009 };
+    return { title: entry.account_title, remaining, dueAmount, due: !!dueDate && dueDate === today && !alreadyPaidThisCycle && remaining > 0.009 };
   }).filter((row) => row.due && row.dueAmount > 0.009);
 
   const totalDue = rows.reduce((sum, row) => sum + row.dueAmount, 0);
