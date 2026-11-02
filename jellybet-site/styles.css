@@ -704,7 +704,7 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
 .accounting-entry-card{padding:18px;border:1px solid rgba(255,255,255,.98);border-radius:20px;background:linear-gradient(145deg,#fff,rgba(255,247,250,.9));box-shadow:0 10px 26px rgba(145,91,116,.07)}
 .accounting-entry-top{display:flex;align-items:flex-start;justify-content:space-between;gap:13px}
 .accounting-entry-top h3{margin:9px 0 3px;color:#79586b;font-size:15px}
-.accounting-entry-top small{color:#ad94a0;font-size:10px}
+.accounting-entry-top small{color:#ad94a0;font-size:10px}.accounting-entry-top .accounting-next-due{display:block;margin-top:5px;color:#a36b86;font-size:11px}.accounting-next-due b{color:#86536e;font-weight:700}
 .accounting-status,.accounting-carry-tag,.accounting-candidate-tag{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:9px;font-weight:600}
 .accounting-status.is-open{background:#fff3df;color:#a9824c}
 .accounting-status.is-paid{background:#edf7ef;color:#688c70}
