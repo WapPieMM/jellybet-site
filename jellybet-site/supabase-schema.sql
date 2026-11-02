@@ -73,7 +73,7 @@ create table if not exists public.accounts (
   title text not null check (char_length(title) between 1 and 100),
   description text not null default '' check (char_length(description) <= 1500),
   price numeric(12,2) not null default 0 check (price >= 0),
-  status text not null default 'available' check (status in ('available','sold')),
+  status text not null default 'available' check (status in ('available','installment','sold')),
   image_url text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -94,6 +94,7 @@ create table if not exists public.account_private_financials (
   acquisition_cost numeric(12,2) not null default 0 check (acquisition_cost >= 0),
   installment_due_date date,
   installment_due_weekday smallint check (installment_due_weekday is null or installment_due_weekday between 0 and 6),
+  installment_plan_index smallint not null default 0 check (installment_plan_index >= 0),
   accounting_handoff_at timestamptz,
   actual_sale_price numeric(12,2) check (actual_sale_price is null or actual_sale_price >= 0),
   updated_at timestamptz not null default now()
