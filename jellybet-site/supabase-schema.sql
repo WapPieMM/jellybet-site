@@ -92,6 +92,8 @@ create policy "Admins can delete accounts" on public.accounts for delete to auth
 create table if not exists public.account_private_financials (
   account_id bigint primary key references public.accounts(id) on delete cascade,
   acquisition_cost numeric(12,2) not null default 0 check (acquisition_cost >= 0),
+  installment_due_date date,
+  actual_sale_price numeric(12,2) check (actual_sale_price is null or actual_sale_price >= 0),
   updated_at timestamptz not null default now()
 );
 alter table public.account_private_financials enable row level security;
