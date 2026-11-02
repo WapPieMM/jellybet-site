@@ -73,7 +73,7 @@ create table if not exists public.accounts (
   title text not null check (char_length(title) between 1 and 100),
   description text not null default '' check (char_length(description) <= 1500),
   price numeric(12,2) not null default 0 check (price >= 0),
-  status text not null default 'available' check (status in ('available','sold')),
+  status text not null default 'available' check (status in ('available','installment','sold')),
   image_url text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
