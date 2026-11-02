@@ -149,10 +149,10 @@
     if(!db)return;
     const [{data,error},{data:costRows,error:costError}]=await Promise.all([
       db.from('accounts').select('*').order('created_at',{ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_date,actual_sale_price')
+      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,accounting_handoff_at,actual_sale_price')
     ]);
     if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
-    if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_accounting.sql: '+costError.message,true);return;}
+    if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_weekday_handoff.sql: '+costError.message,true);return;}
     accounts=data||[];
     accountFinancials=new Map((costRows||[]).map(row=>[String(row.account_id),row]));
     accountCosts=new Map((costRows||[]).map(row=>[String(row.account_id),Number(row.acquisition_cost)]));
@@ -182,7 +182,7 @@
   function updateAccountStatusFields(){
     const status=$('accountStatus')?.value||'available';
     const installmentField=$('accountInstallmentDueDateField'),soldField=$('accountActualSalePriceField');
-    const dueInput=$('accountInstallmentDueDate'),saleInput=$('accountActualSalePrice');
+    const dueInput=$('accountInstallmentDueWeekday'),saleInput=$('accountActualSalePrice');
     if(installmentField)installmentField.hidden=status!=='installment';
     if(soldField)soldField.hidden=status!=='sold';
     if(dueInput)dueInput.required=status==='installment';
@@ -306,13 +306,18 @@
       const file=$('accountImageFile').files[0];if(file)image_url=await uploadImage(file,'account-images','admin');
       const costValue=$('accountCost').value.trim();
       if(costValue===''||!Number.isFinite(Number(costValue))||Number(costValue)<0)throw new Error('กรุณากรอกต้นทุนไอดีให้ถูกต้อง');
-const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'available';const sale_started_at=existing?.sale_started_at||((previousStatus==='available'&&(nextStatus==='installment'||nextStatus==='sold'))?new Date().toISOString():null);
+const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'available';
       const existingFinancials=existing?accountFinancials.get(String(existing.id))||{}:{};
-      let installmentDueDate=existingFinancials.installment_due_date||null;
+      let installmentDueWeekday=existingFinancials.installment_due_weekday==null?'':String(existingFinancials.installment_due_weekday);
       let actualSalePrice=existingFinancials.actual_sale_price??null;
+      const transitionedToAccounting=['installment','sold'].includes(nextStatus)&&previousStatus==='available';
+      const accountingHandoffAt=transitionedToAccounting?new Date().toISOString():(existingFinancials.accounting_handoff_at||existing?.sale_started_at||null);
+      const sale_started_at=transitionedToAccounting?accountingHandoffAt:(existing?.sale_started_at||null);
       if(nextStatus==='installment'){
-        installmentDueDate=$('accountInstallmentDueDate').value;
-        if(!installmentDueDate)throw new Error('กรุณาระบุวันที่ต้องส่งยอดสำหรับไอดีติดผ่อน');
+        installmentDueWeekday=$('accountInstallmentDueWeekday').value;
+        if(installmentDueWeekday==='')throw new Error('กรุณาเลือกวันประจำสัปดาห์ที่ลูกค้าต้องส่งยอด');
+      } else if(nextStatus==='sold') {
+        installmentDueWeekday='';
       }
       if(nextStatus==='sold'){
         const actualSaleValue=$('accountActualSalePrice').value.trim();
@@ -329,7 +334,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       let savedAccountId=id;
       if(id){const {error}=await db.from('accounts').update(payload).eq('id',id);if(error)throw error;}
       else{const {data,error}=await db.from('accounts').insert(payload).select('id').single();if(error)throw error;savedAccountId=data.id;}
-      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_date:installmentDueDate,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
+      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),accounting_handoff_at:accountingHandoffAt,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
       if(costError)throw costError;
       resetAccountForm();await refreshAccounts();setMessage('accountMessage','บันทึกรายการและต้นทุนส่วนตัวเรียบร้อยแล้ว ♡');toast('บันทึก Account แล้ว ♡');
     }catch(err){setMessage('accountMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
@@ -348,7 +353,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
     $('accountPrice').value=a.price??'';
     const financial=accountFinancials.get(String(a.id))||{};
     $('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';
-    $('accountInstallmentDueDate').value=financial.installment_due_date||'';
+    $('accountInstallmentDueWeekday').value=financial.installment_due_weekday==null?'':String(financial.installment_due_weekday);
     $('accountActualSalePrice').value=financial.actual_sale_price??'';
     $('accountStatus').value=statusOverride||a.status||'available';
     updateAccountStatusFields();
