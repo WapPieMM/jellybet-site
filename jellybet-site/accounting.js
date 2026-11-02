@@ -28,30 +28,24 @@
   function dateKey(date){
     return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
   }
-  function latestWeeklyDueDate(weekday){
-    const date=new Date();date.setHours(0,0,0,0);
-    date.setDate(date.getDate()-((date.getDay()-Number(weekday)+7)%7));
-    return dateKey(date);
+  function dateFromKey(value){const p=String(value||'').slice(0,10).split('-').map(Number);return p.length===3?new Date(Date.UTC(p[0],p[1]-1,p[2])):null;}
+  function keyFromUtc(date){return date.toISOString().slice(0,10);}
+  function addDays(value,days){const d=dateFromKey(value);if(!d)return '';d.setUTCDate(d.getUTCDate()+days);return keyFromUtc(d);}
+  function latestScheduledDate(entry,reference=today()){
+    const type=entry.installment_schedule_type||'weekly';
+    if(type==='weekly'){if(entry.installment_due_weekday==null)return '';const d=dateFromKey(reference);d.setUTCDate(d.getUTCDate()-((d.getUTCDay()-Number(entry.installment_due_weekday)+7)%7));return keyFromUtc(d);}
+    const anchor=entry.installment_due_date;if(!anchor||anchor>reference)return '';
+    const interval=type==='every_other_day'?2:1,elapsed=(dateFromKey(reference)-dateFromKey(anchor))/86400000;
+    return addDays(anchor,Math.floor(elapsed/interval)*interval);
   }
-  function nextWeeklyDueDate(weekday, skipToday){
-    const date=new Date();
-    date.setHours(0,0,0,0);
-    let daysUntil=(Number(weekday)-date.getDay()+7)%7;
-    if(skipToday && daysUntil===0) daysUntil=7;
-    date.setDate(date.getDate()+daysUntil);
-    return dateKey(date);
+  function nextScheduledDate(entry,afterDate=today()){
+    const type=entry.installment_schedule_type||'weekly';
+    if(type==='weekly'){if(entry.installment_due_weekday==null)return '';const d=dateFromKey(afterDate);let delta=(Number(entry.installment_due_weekday)-d.getUTCDay()+7)%7;if(!delta)delta=7;d.setUTCDate(d.getUTCDate()+delta);return keyFromUtc(d);}
+    const anchor=entry.installment_due_date;if(!anchor)return '';const interval=type==='every_other_day'?2:1;if(anchor>afterDate)return anchor;
+    const elapsed=(dateFromKey(afterDate)-dateFromKey(anchor))/86400000;return addDays(anchor,(Math.floor(elapsed/interval)+1)*interval);
   }
-  function weeklyDueState(entry){
-    if(entry.installment_due_weekday==null)return {label:'',dueToday:false,overdue:false,nextDate:''};
-    const scheduled=latestWeeklyDueDate(entry.installment_due_weekday);
-    const paidAfterSchedule=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled);
-    const nextDate=nextWeeklyDueDate(entry.installment_due_weekday, paidAfterSchedule);
-    return {
-      label:'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday),
-      dueToday:!paidAfterSchedule&&scheduled===today(),
-      overdue:!paidAfterSchedule&&scheduled<today(),
-      nextDate
-    };
+  function scheduleLabel(entry){const type=entry.installment_schedule_type||'weekly';if(type==='daily')return 'ส่งยอดทุกวัน · เริ่ม '+formatDate(entry.installment_due_date);if(type==='every_other_day')return 'ส่งยอดวันเว้นวัน · เริ่ม '+formatDate(entry.installment_due_date);return entry.installment_due_weekday==null?'':'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday);}
+  function scheduleDueState(entry){const scheduled=latestScheduledDate(entry);if(!scheduled)return {label:scheduleLabel(entry),dueToday:false,overdue:false,nextDate:nextScheduledDate(entry)};const paid=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled);return {label:scheduleLabel(entry),dueToday:!paid&&scheduled===today(),overdue:!paid&&scheduled<today(),nextDate:paid?nextScheduledDate(entry):scheduled};
   }
   const bangkokDate = value => {
     if (!value) return '';
@@ -138,7 +132,7 @@
 
     const outstandingList = openEntries.slice().sort((a,b) => remaining(b)-remaining(a)).slice(0,6);
     $('overviewOutstanding').innerHTML = outstandingList.length ? outstandingList.map(entry => (
-      '<div class="accounting-activity-row"><div><strong>' + escapeHtml(entry.account_title) + '</strong><small>' + (entry.is_carryover ? 'ยอดยกมาตั้งต้น' : 'ขาย ' + formatDate(entry.sale_date)) + (entry.installment_due_weekday!=null ? ' · ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday) : '') + '</small></div><b>' + money(remaining(entry)) + '</b></div>'
+      '<div class="accounting-activity-row"><div><strong>' + escapeHtml(entry.account_title) + '</strong><small>' + (entry.is_carryover ? 'ยอดยกมาตั้งต้น' : 'ขาย ' + formatDate(entry.sale_date)) + (scheduleLabel(entry) ? ' · '+escapeHtml(scheduleLabel(entry)) : '') + '</small></div><b>' + money(remaining(entry)) + '</b></div>'
     )).join('') : '<p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p>';
   }
 
@@ -148,7 +142,7 @@
     $('installmentOpenTotal').textContent = 'ยอดค้าง ' + money(total);
     $('accountingInstallmentList').innerHTML = entries.length ? entries.slice().sort((a,b) => remaining(b)-remaining(a)).map(entry => {
       const due = remaining(entry);
-      const schedule = weeklyDueState(entry);
+      const schedule = scheduleDueState(entry);
       const overdue = due > 0.009 && schedule.overdue;
       const dueToday = due > 0.009 && schedule.dueToday;
       const statusClass = due <= 0.009 ? 'is-paid' : overdue ? 'is-overdue' : 'is-open';
@@ -157,9 +151,9 @@
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
-        '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ส่งยอด/สัปดาห์ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
+        '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่อรอบ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
-        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + (entry.installment_due_weekday!=null && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
@@ -199,13 +193,13 @@
     const saleValue = account.status === 'sold' && account.actual_sale_price != null ? Number(account.actual_sale_price) : plans.length && !carryover && account.status === 'installment' ? Number(firstPlan.down || 0) + Number(firstPlan.total || 0) : Number(account.price || 0);
     const receivedDefault = carryover ? 0 : account.status === 'installment' ? Number(firstPlan.down || 0) : saleValue;
     return '<article class="accounting-import-card card" data-import-card data-account-id="' + account.id + '" data-carryover="' + String(carryover) + '">' +
-      '<div class="accounting-import-card-head"><div><span class="accounting-candidate-tag">' + (carryover ? 'ยอดยกมาเดิม' : account.status === 'installment' ? 'เริ่มผ่อนใหม่' : 'ขายใหม่') + '</span><h4>' + escapeHtml(account.title || 'Account #' + account.id) + '</h4><small>ราคาใน Account ' + money(account.price) + ' · ' + (carryover ? 'วันเริ่มต้นบัญชี ' + formatDate(START_DATE) : 'วันที่เริ่มขาย ' + formatDate(saleDate)) + (account.status === 'installment' && account.installment_due_weekday!=null ? ' · ส่งยอดทุก' + weekdayLabel(account.installment_due_weekday) : '') + '</small></div><span class="accounting-account-id">#' + escapeHtml(account.id) + '</span></div>' +
+      '<div class="accounting-import-card-head"><div><span class="accounting-candidate-tag">' + (carryover ? 'ยอดยกมาเดิม' : account.status === 'installment' ? 'เริ่มผ่อนใหม่' : 'ขายใหม่') + '</span><h4>' + escapeHtml(account.title || 'Account #' + account.id) + '</h4><small>ราคาใน Account ' + money(account.price) + ' · ' + (carryover ? 'วันเริ่มต้นบัญชี ' + formatDate(START_DATE) : 'วันที่เริ่มขาย ' + formatDate(saleDate)) + (account.status === 'installment' ? ' · ' + (account.installment_schedule_type==='daily'?'รายวัน':account.installment_schedule_type==='every_other_day'?'วันเว้นวัน':'ทุก'+weekdayLabel(account.installment_due_weekday)) : '') + '</small></div><span class="accounting-account-id">#' + escapeHtml(account.id) + '</span></div>' +
       planControl +
       '<div class="accounting-import-fields"><label>' + (carryover ? 'ราคาขายเดิมตามข้อมูล Account (บาท)' : 'ยอดขายจริง (บาท)') + '<input type="number" min="0" step="0.01" data-import-sale value="' + saleValue + '" required></label>' +
       '<label>ต้นทุนไอดี (บาท)<input type="number" min="0" step="0.01" data-import-cost value="' + Number(account.acquisition_cost || 0) + '" required></label>' +
       (carryover ? '<label>ยอดค้างตั้งต้น (บาท)<input type="number" min="0" step="0.01" data-import-opening placeholder="กรอกยอดคงเหลือจริง" required></label>' :
         '<label>เงินที่รับแล้ว ณ วันเริ่มขาย (บาท)<input type="number" min="0" step="0.01" data-import-received value="' + receivedDefault + '" required></label>') +
-      '<label>ยอดส่งต่อสัปดาห์ (บาท)<input type="number" min="0" step="0.01" data-import-weekly value="' + Number(firstPlan.weekly || 0) + '"></label></div>' +
+      '<label>ยอดชำระต่อรอบ (บาท)<input type="number" min="0" step="0.01" data-import-weekly value="' + Number(firstPlan.weekly || 0) + '"></label></div>' +
       '<label class="accounting-import-note-label">หมายเหตุ (ไม่บังคับ)<input type="text" maxlength="250" data-import-note placeholder="ข้อมูลเพิ่มเติม"></label>' +
       '<button type="button" class="primary-button" data-import-entry>นำเข้าบัญชีรายการนี้</button></article>';
   }
@@ -232,7 +226,7 @@
       db.from('accounting_entries').select('*').order('sale_date', {ascending:false}),
       db.from('accounting_payments').select('*').order('paid_on', {ascending:false}),
       db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,accounting_handoff_at,actual_sale_price')
+      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,accounting_handoff_at,actual_sale_price')
     ]);
     const issue = results.find(result => result.error);
     if (issue) {
@@ -251,6 +245,8 @@
         ...account,
         acquisition_cost: Number(financials.acquisition_cost || 0),
         installment_due_weekday: financials.installment_due_weekday == null ? null : Number(financials.installment_due_weekday),
+        installment_schedule_type: financials.installment_schedule_type || 'weekly',
+        installment_due_date: financials.installment_due_date || null,
         accounting_handoff_at: financials.accounting_handoff_at || null,
         actual_sale_price: financials.actual_sale_price == null ? null : Number(financials.actual_sale_price)
       };
@@ -298,6 +294,8 @@
       opening_balance: carryover ? Number(card.querySelector('[data-import-opening]').value) : saleInput,
       weekly_amount: weeklyAmount,
       installment_due_weekday: !carryover && account.status === 'installment' ? account.installment_due_weekday ?? null : null,
+      installment_schedule_type: !carryover && account.status === 'installment' ? account.installment_schedule_type || 'weekly' : 'weekly',
+      installment_due_date: !carryover && account.status === 'installment' ? account.installment_due_date || null : null,
       is_carryover: carryover,
       notes: note
     };
@@ -338,6 +336,11 @@
     $('editAccountingOpeningBalance').value = Number(entry.opening_balance || 0);
     $('editAccountingWeeklyAmount').value = Number(entry.weekly_amount || 0);
     $('editAccountingDueWeekday').value = entry.installment_due_weekday == null ? '' : String(entry.installment_due_weekday);
+    $('editAccountingScheduleType').value = entry.installment_schedule_type || 'weekly';
+    $('editAccountingDueDate').value = entry.installment_due_date || '';
+    $('editAccountingWeekdayField').hidden = $('editAccountingScheduleType').value !== 'weekly';
+    $('editAccountingStartDateField').hidden = $('editAccountingScheduleType').value === 'weekly';
+    $('editAccountingScheduleType').onchange = () => { const w=$('editAccountingScheduleType').value==='weekly'; $('editAccountingWeekdayField').hidden=!w; $('editAccountingStartDateField').hidden=w; };
     $('editAccountingNotes').value = entry.notes || '';
     $('accountingEntryEditMessage').textContent = '';
     $('accountingEntryEditDialog').showModal();
@@ -360,6 +363,9 @@
       $('accountingEntryEditMessage').textContent = 'กรุณาตรวจสอบตัวเลขให้ถูกต้องและไม่ติดลบ';
       return;
     }
+    const scheduleType = $('editAccountingScheduleType').value;
+    if (scheduleType === 'weekly' && !$('editAccountingDueWeekday').value) { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันส่งยอดประจำสัปดาห์'; return; }
+    if (scheduleType !== 'weekly' && !$('editAccountingDueDate').value) { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันที่เริ่มต้นรอบผ่อน'; return; }
     if (totalPaid(id) > openingBalance + 0.001) {
       $('accountingEntryEditMessage').textContent = 'ยอดตั้งต้นต้องไม่น้อยกว่าเงินที่รับไปแล้ว (' + money(totalPaid(id)) + ')';
       return;
@@ -373,11 +379,22 @@
         cost_amount: costAmount,
         opening_balance: openingBalance,
         weekly_amount: weeklyAmount,
-        installment_due_weekday: $('editAccountingDueWeekday').value === '' ? null : Number($('editAccountingDueWeekday').value),
+        installment_due_weekday: scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null,
+        installment_schedule_type: scheduleType,
+        installment_due_date: scheduleType === 'weekly' ? null : $('editAccountingDueDate').value,
         notes: $('editAccountingNotes').value.trim(),
         updated_at: new Date().toISOString()
       }).eq('id', id);
       if (error) throw error;
+      if (entry.source_account_id) {
+        const {error: financialError} = await db.from('account_private_financials').update({
+          installment_due_weekday: scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null,
+          installment_schedule_type: scheduleType,
+          installment_due_date: scheduleType === 'weekly' ? null : $('editAccountingDueDate').value,
+          updated_at: new Date().toISOString()
+        }).eq('account_id', entry.source_account_id);
+        if (financialError) throw new Error('บันทึก Accounting แล้ว แต่ซิงก์รูปแบบการผ่อนกลับไปยัง Account ไม่สำเร็จ: ' + financialError.message);
+      }
       $('accountingEntryEditDialog').close();
       await loadData();
       setMessage('แก้ไขข้อมูลบัญชีเรียบร้อยแล้ว และคำนวณยอดค้างใหม่ ♡');
@@ -558,6 +575,8 @@
           cost_amount: netCost,
           weekly_amount: 0,
           installment_due_weekday: null,
+          installment_schedule_type: 'weekly',
+          installment_due_date: null,
           notes: [entry.notes, 'ปิดรอบ: ลูกค้าหลุดผ่อน; เงินรับรวม ' + received + ' บาท; ต้นทุนสุทธิหลังหักเงินรับ ' + netCost + ' บาท; กำไร ' + profit + ' บาท'].filter(Boolean).join(' | '),
           source_account_id: null,
           updated_at: new Date().toISOString()
@@ -568,6 +587,9 @@
         const {error:financialError} = await db.from('account_private_financials').update({
           accounting_handoff_at:null,
           actual_sale_price:null,
+          installment_due_weekday:null,
+          installment_schedule_type:'weekly',
+          installment_due_date:null,
           updated_at:new Date().toISOString()
         }).eq('account_id',entry.source_account_id);
         if (financialError) throw financialError;

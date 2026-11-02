@@ -149,7 +149,7 @@
     if(!db)return;
     const [{data,error},{data:costRows,error:costError}]=await Promise.all([
       db.from('accounts').select('*').order('created_at',{ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_plan_index,accounting_handoff_at,actual_sale_price')
+      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
     if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
     if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_weekday_handoff.sql: '+costError.message,true);return;}
@@ -159,7 +159,7 @@
     renderAccounts();
   }
   const installmentPlanMarker='[[JELLYBET_INSTALLMENT_PLANS]]';
-  function installmentPlanCard(plan={},index=0){return '<section class="account-installment-plan-card" data-installment-plan><div class="account-installment-plan-heading"><strong>ตัวเลือกที่ '+(index+1)+'</strong><button type="button" class="account-installment-remove" data-remove-installment-plan aria-label="ลบตัวเลือกนี้">ลบ</button></div><label>ระยะเวลาผ่อน (เดือน)<input data-plan-months type="number" min="1" max="60" step="1" value="'+escapeHtml(plan.months??'')+'" placeholder="เช่น 1"></label><div class="account-admin-inline"><label>วางดาวน์ (บาท)<input data-plan-down type="number" min="0" step="1" value="'+escapeHtml(plan.down??'')+'" placeholder="เช่น 1,000"></label><label>ผ่อนต่ออีก (บาท)<input data-plan-total type="number" min="0" step="1" value="'+escapeHtml(plan.total??'')+'" placeholder="เช่น 4,000"></label></div><p class="account-plan-total-preview" data-plan-total-preview></p><label class="account-plan-weekly-label">ส่งยอด อาทิตย์ละ (บาท)<input data-plan-weekly type="number" min="0" step="1" value="'+escapeHtml(plan.weekly??'')+'" placeholder="เช่น 1,000"></label></section>';}
+  function installmentPlanCard(plan={},index=0){return '<section class="account-installment-plan-card" data-installment-plan><div class="account-installment-plan-heading"><strong>ตัวเลือกที่ '+(index+1)+'</strong><button type="button" class="account-installment-remove" data-remove-installment-plan aria-label="ลบตัวเลือกนี้">ลบ</button></div><label>ระยะเวลาผ่อน (เดือน)<input data-plan-months type="number" min="1" max="60" step="1" value="'+escapeHtml(plan.months??'')+'" placeholder="เช่น 1"></label><div class="account-admin-inline"><label>วางดาวน์ (บาท)<input data-plan-down type="number" min="0" step="1" value="'+escapeHtml(plan.down??'')+'" placeholder="เช่น 1,000"></label><label>ผ่อนต่ออีก (บาท)<input data-plan-total type="number" min="0" step="1" value="'+escapeHtml(plan.total??'')+'" placeholder="เช่น 4,000"></label></div><p class="account-plan-total-preview" data-plan-total-preview></p><label class="account-plan-weekly-label">ยอดชำระต่อรอบ (บาท)<input data-plan-weekly type="number" min="0" step="1" value="'+escapeHtml(plan.weekly??'')+'" placeholder="เช่น 1,000"></label></section>';}
   function updateInstallmentPlanTotal(card){if(!card)return;const down=Number(card.querySelector('[data-plan-down]')?.value)||0,installment=Number(card.querySelector('[data-plan-total]')?.value)||0,output=card.querySelector('[data-plan-total-preview]');if(output)output.textContent='ยอดรวม (เงินดาวน์ + ยอดผ่อนต่อ): '+(down+installment).toLocaleString('th-TH')+' บาท';}
   function renderInstallmentPlans(plans=[]){const wrap=$('accountInstallmentPlans');if(!wrap)return;wrap.innerHTML=(plans||[]).map((plan,i)=>installmentPlanCard(plan,i)).join('');wrap.querySelectorAll('[data-installment-plan]').forEach(updateInstallmentPlanTotal);}
   function collectInstallmentPlans(){return Array.from(document.querySelectorAll('[data-installment-plan]')).map(card=>({months:Number(card.querySelector('[data-plan-months]')?.value)||0,down:Number(card.querySelector('[data-plan-down]')?.value)||0,total:Number(card.querySelector('[data-plan-total]')?.value)||0,weekly:Number(card.querySelector('[data-plan-weekly]')?.value)||0})).filter(plan=>plan.months>0);}
@@ -183,7 +183,7 @@
   function updateAccountStatusFields(){
     const status=$('accountStatus')?.value||'available';
     const installmentField=$('accountInstallmentDueDateField'),planField=$('accountInstallmentPlanField'),soldField=$('accountActualSalePriceField');
-    const dueInput=$('accountInstallmentDueWeekday'),planSelect=$('accountInstallmentPlanIndex'),saleInput=$('accountActualSalePrice');
+    const dueInput=$('accountInstallmentDueWeekday'),startDateInput=$('accountInstallmentDueDate'),scheduleTypeInput=$('accountInstallmentScheduleType'),weekdayField=$('accountInstallmentWeekdayField'),startDateField=$('accountInstallmentStartDateField'),planSelect=$('accountInstallmentPlanIndex'),saleInput=$('accountActualSalePrice');
     if(installmentField)installmentField.hidden=status!=='installment';
     if(planField)planField.hidden=status!=='installment';
     if(planSelect){
@@ -193,10 +193,15 @@
       planSelect.value=plans.some((plan,index)=>String(index)===prior)?prior:'0';
     }
     if(soldField)soldField.hidden=status!=='sold';
-    if(dueInput)dueInput.required=status==='installment';
+    const scheduleType=scheduleTypeInput?.value||'weekly';
+    if(weekdayField)weekdayField.hidden=scheduleType!=='weekly';
+    if(startDateField)startDateField.hidden=scheduleType==='weekly';
+    if(dueInput)dueInput.required=status==='installment'&&scheduleType==='weekly';
+    if(startDateInput)startDateInput.required=status==='installment'&&scheduleType!=='weekly';
     if(saleInput)saleInput.required=status==='sold';
   }
   $('accountStatus')?.addEventListener('change',updateAccountStatusFields);
+  $('accountInstallmentScheduleType')?.addEventListener('change',updateAccountStatusFields);
   function resetAccountForm(){
     $('accountForm').reset();$('editAccountId').value='';$('accountStatus').value='available';renderInstallmentPlans([]);updateAccountStatusFields();
     accountDescriptionOriginal='';accountDescriptionDirty=false;accountStructuredDetailsDirty=false;
@@ -317,17 +322,23 @@
 const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'available';
       const existingFinancials=existing?accountFinancials.get(String(existing.id))||{}:{};
       let installmentDueWeekday=existingFinancials.installment_due_weekday==null?'':String(existingFinancials.installment_due_weekday);
+      let installmentScheduleType=existingFinancials.installment_schedule_type||'weekly';
+      let installmentDueDate=existingFinancials.installment_due_date||'';
       let actualSalePrice=existingFinancials.actual_sale_price??null;
       const transitionedToAccounting=['installment','sold'].includes(nextStatus)&&previousStatus==='available';
       const accountingHandoffAt=transitionedToAccounting?new Date().toISOString():(existingFinancials.accounting_handoff_at||existing?.sale_started_at||null);
       const sale_started_at=transitionedToAccounting?accountingHandoffAt:(existing?.sale_started_at||null);
       const installmentPlanIndex=nextStatus==='installment'?Number($('accountInstallmentPlanIndex').value||0):0;
       if(nextStatus==='installment'){
-        installmentDueWeekday=$('accountInstallmentDueWeekday').value;
-        if(installmentDueWeekday==='')throw new Error('กรุณาเลือกวันประจำสัปดาห์ที่ลูกค้าต้องส่งยอด');
-      } else if(nextStatus==='sold') {
-        installmentDueWeekday='';
-      }
+        installmentScheduleType=$('accountInstallmentScheduleType').value||'weekly';
+        if(installmentScheduleType==='weekly'){
+          installmentDueWeekday=$('accountInstallmentDueWeekday').value;installmentDueDate='';
+          if(installmentDueWeekday==='')throw new Error('กรุณาเลือกวันประจำสัปดาห์ที่ลูกค้าต้องส่งยอด');
+        }else{
+          installmentDueWeekday='';installmentDueDate=$('accountInstallmentDueDate').value;
+          if(!installmentDueDate)throw new Error('กรุณาเลือกวันที่เริ่มต้นรอบผ่อน');
+        }
+      } else if(nextStatus==='sold'||nextStatus==='available') { installmentDueWeekday='';installmentDueDate='';installmentScheduleType='weekly'; }
       if(nextStatus==='sold'){
         const actualSaleValue=$('accountActualSalePrice').value.trim();
         if(actualSaleValue===''||!Number.isFinite(Number(actualSaleValue))||Number(actualSaleValue)<0.01)throw new Error('กรุณากรอกราคาขายจริงให้ถูกต้อง');
@@ -343,7 +354,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       let savedAccountId=id;
       if(id){const {error}=await db.from('accounts').update(payload).eq('id',id);if(error)throw error;}
       else{const {data,error}=await db.from('accounts').insert(payload).select('id').single();if(error)throw error;savedAccountId=data.id;}
-      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),installment_plan_index:installmentPlanIndex,accounting_handoff_at:accountingHandoffAt,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
+      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),installment_schedule_type:installmentScheduleType,installment_due_date:installmentDueDate||null,installment_plan_index:installmentPlanIndex,accounting_handoff_at:accountingHandoffAt,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
       if(costError)throw costError;
       if(['installment','sold'].includes(nextStatus)&&accountingHandoffAt){
         const {data:accountingEntry,error:accountingVerifyError}=await db.from('accounting_entries').select('id').eq('source_account_id',savedAccountId).maybeSingle();
@@ -371,6 +382,8 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
     const financial=accountFinancials.get(String(a.id))||{};
     $('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';
     $('accountInstallmentDueWeekday').value=financial.installment_due_weekday==null?'':String(financial.installment_due_weekday);
+    $('accountInstallmentScheduleType').value=financial.installment_schedule_type||'weekly';
+    $('accountInstallmentDueDate').value=financial.installment_due_date||'';
     $('accountInstallmentPlanIndex').value=financial.installment_plan_index==null?'0':String(financial.installment_plan_index);
     $('accountActualSalePrice').value=financial.actual_sale_price??'';
     $('accountStatus').value=statusOverride||a.status||'available';
