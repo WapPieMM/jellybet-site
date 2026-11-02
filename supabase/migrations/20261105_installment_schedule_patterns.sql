@@ -115,6 +115,20 @@ begin
   returning id into v_entry_id;
 
   if v_entry_id is null then
+    -- Keep an already-created ledger entry aligned when the Account schedule is edited.
+    select id into v_entry_id
+    from public.accounting_entries
+    where source_account_id = new.account_id;
+
+    if v_entry_id is not null then
+      update public.accounting_entries
+      set weekly_amount = v_weekly_amount,
+          installment_due_weekday = v_due_weekday,
+          installment_schedule_type = v_schedule_type,
+          installment_due_date = v_due_date,
+          updated_at = now()
+      where id = v_entry_id;
+    end if;
     return new;
   end if;
 
