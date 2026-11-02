@@ -112,6 +112,18 @@
         <div class="accounting-dialog-actions"><button type="button" class="secondary-button" id="cancelAccountingEntryEdit">ยกเลิก</button><button type="submit" class="primary-button">บันทึกการแก้ไข</button></div>
       </form>
     </dialog>
+    <dialog class="accounting-payment-dialog" id="accountingPaymentEditDialog">
+      <form id="accountingPaymentEditForm" method="dialog">
+        <div class="accounting-dialog-heading"><div><p class="eyebrow">EDIT PAYMENT</p><h2>แก้ไขยอดรับเงินจากลูกค้า</h2><p id="accountingPaymentEditAccount"></p></div><button type="button" id="closeAccountingPaymentEdit" aria-label="ปิด">×</button></div>
+        <input type="hidden" id="editAccountingPaymentId">
+        <label>จำนวนเงินที่ได้รับ (บาท)<input id="editAccountingPaymentAmount" type="number" min="0.01" step="0.01" required></label>
+        <label>วันที่รับเงินจริง<input id="editAccountingPaymentDate" type="date" required></label>
+        <label>ประเภท<select id="editAccountingPaymentType"><option value="installment">ค่างวด</option><option value="deposit">เงินมัดจำ</option><option value="other">อื่น ๆ</option></select></label>
+        <label>หมายเหตุ<input id="editAccountingPaymentNote" maxlength="250" placeholder="เช่น งวดที่ 2 / โอนผ่านธนาคาร"></label>
+        <p class="form-message" id="accountingPaymentEditMessage" role="status"></p>
+        <div class="accounting-dialog-actions"><button type="button" class="secondary-button" id="cancelAccountingPaymentEdit">ยกเลิก</button><button type="submit" class="primary-button">บันทึกการแก้ไข</button></div>
+      </form>
+    </dialog>
     <dialog class="accounting-payment-dialog" id="accountingPaymentDialog">
       <form id="accountingPaymentForm" method="dialog">
         <div class="accounting-dialog-heading"><div><p class="eyebrow">ADD PAYMENT</p><h2>บันทึกรับเงิน</h2><p id="accountingPaymentAccount"></p></div><button type="button" id="closeAccountingPayment" aria-label="ปิด">×</button></div>
