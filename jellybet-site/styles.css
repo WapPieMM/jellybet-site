@@ -793,3 +793,5 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
 .account-admin-conditional{display:grid;gap:6px;padding:11px 12px;border:1px solid #efc6d7;border-radius:13px;background:#fff6fa}
 .account-admin-conditional[hidden]{display:none!important}
 .accounting-status.is-overdue{background:#fff0f0;color:#b94d5a;border-color:#f2c4c9}
+
+.account-admin-conditional select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;color:var(--ink);font:inherit}
