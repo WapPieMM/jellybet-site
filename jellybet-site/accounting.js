@@ -140,7 +140,7 @@
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
         '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
-        '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
+        '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
     }).join('') : '<div class="accounting-empty card">ยังไม่มีรายการบัญชี กรุณาตรวจสอบรายการจากแท็บ “นำเข้าจาก Account”</div>';
   }
@@ -153,7 +153,7 @@
     $('transactionMonthTotal').textContent = money(total);
     $('accountingTransactionList').innerHTML = visible.length ? '<div class="accounting-transaction-table-wrap"><table class="accounting-transaction-table"><thead><tr><th>วันที่รับ</th><th>รายการ</th><th>ประเภท</th><th>จำนวนเงิน</th><th></th></tr></thead><tbody>' + visible.map(payment => {
       const entry = entryById(payment.entry_id);
-      return '<tr><td>' + formatDate(payment.paid_on) + '</td><td><strong>' + escapeHtml(entry ? entry.account_title : 'Account ที่ถูกนำออก') + '</strong><small>' + escapeHtml(payment.note || '') + '</small></td><td>' + typeLabel(payment.payment_type) + '</td><td class="accounting-money-cell">' + money(payment.amount) + '</td><td><button type="button" class="accounting-delete-button" data-delete-payment="' + payment.id + '" aria-label="ลบรายการรับเงิน">ลบ</button></td></tr>';
+      return '<tr><td>' + formatDate(payment.paid_on) + '</td><td><strong>' + escapeHtml(entry ? entry.account_title : 'Account ที่ถูกนำออก') + '</strong><small>' + escapeHtml(payment.note || '') + '</small></td><td>' + typeLabel(payment.payment_type) + '</td><td class="accounting-money-cell">' + money(payment.amount) + '</td><td><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button><button type="button" class="accounting-delete-button" data-delete-payment="' + payment.id + '" aria-label="ลบรายการรับเงิน">ลบ</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<p class="accounting-empty">ยังไม่มีรายการรับเงินในเดือนนี้</p>';
   }
 
@@ -370,6 +370,59 @@
   $('accountingEntryEditDialog').querySelector('#closeAccountingEntryEdit').addEventListener('click', () => $('accountingEntryEditDialog').close());
   $('accountingEntryEditDialog').querySelector('#cancelAccountingEntryEdit').addEventListener('click', () => $('accountingEntryEditDialog').close());
 
+  function openPaymentEditDialog(paymentId) {
+    const payment = payments.find(item => String(item.id) === String(paymentId));
+    if (!payment) return;
+    const entry = entryById(payment.entry_id);
+    $('editAccountingPaymentId').value = payment.id;
+    $('accountingPaymentEditAccount').textContent = entry ? entry.account_title : 'Account ที่ถูกนำออก';
+    $('editAccountingPaymentAmount').value = Number(payment.amount || 0);
+    $('editAccountingPaymentDate').value = payment.paid_on || today();
+    $('editAccountingPaymentType').value = payment.payment_type || 'installment';
+    $('editAccountingPaymentNote').value = payment.note || '';
+    $('accountingPaymentEditMessage').textContent = '';
+    $('accountingPaymentEditDialog').showModal();
+  }
+
+  $('accountingPaymentEditForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const paymentId = $('editAccountingPaymentId').value;
+    const payment = payments.find(item => String(item.id) === String(paymentId));
+    const amount = Number($('editAccountingPaymentAmount').value);
+    if (!payment || !Number.isFinite(amount) || amount <= 0) {
+      $('accountingPaymentEditMessage').textContent = 'กรุณากรอกจำนวนเงินที่มากกว่า 0';
+      return;
+    }
+    const entry = entryById(payment.entry_id);
+    const otherPayments = payments.filter(item => item.entry_id === payment.entry_id && String(item.id) !== String(payment.id))
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    if (entry && otherPayments + amount > Number(entry.opening_balance || 0) + 0.001) {
+      $('accountingPaymentEditMessage').textContent = 'ยอดรับรวมจะเกินยอดตั้งต้นของบัญชี (' + money(entry.opening_balance) + ')';
+      return;
+    }
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const {error} = await db.from('accounting_payments').update({
+        amount,
+        paid_on: $('editAccountingPaymentDate').value,
+        payment_type: $('editAccountingPaymentType').value,
+        note: $('editAccountingPaymentNote').value.trim()
+      }).eq('id', paymentId);
+      if (error) throw error;
+      $('accountingPaymentEditDialog').close();
+      await loadData();
+      setMessage('แก้ไขยอดรับเงินจากลูกค้าเรียบร้อยแล้ว และคำนวณยอดคงเหลือใหม่ ♡');
+    } catch (error) {
+      $('accountingPaymentEditMessage').textContent = 'แก้ไขไม่สำเร็จ: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('accountingPaymentEditDialog').querySelector('#closeAccountingPaymentEdit').addEventListener('click', () => $('accountingPaymentEditDialog').close());
+  $('accountingPaymentEditDialog').querySelector('#cancelAccountingPaymentEdit').addEventListener('click', () => $('accountingPaymentEditDialog').close());
+
   function openPaymentDialog(entryId) {
     const entry = entryById(entryId);
     if (!entry) return;
@@ -466,6 +519,8 @@
     }
     const editEntryButton = event.target.closest('[data-edit-entry]');
     if (editEntryButton) { openEntryEditDialog(editEntryButton.dataset.editEntry); return; }
+    const editPaymentButton = event.target.closest('[data-edit-payment]');
+    if (editPaymentButton) { openPaymentEditDialog(editPaymentButton.dataset.editPayment); return; }
     const recordButton = event.target.closest('[data-record-payment]');
     if (recordButton) { openPaymentDialog(recordButton.dataset.recordPayment); return; }
     const historyButton = event.target.closest('[data-toggle-history]');
