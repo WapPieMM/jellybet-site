@@ -25,16 +25,35 @@
   const selectedMonth = () => $('accountingMonth').value || START_DATE.slice(0,7);
   const WEEKDAY_NAMES = ['วันอาทิตย์','วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์'];
   const weekdayLabel = value => value!==null && value!=='' && Number.isInteger(Number(value)) && Number(value)>=0 && Number(value)<=6 ? WEEKDAY_NAMES[Number(value)] : '';
+  function dateKey(date){
+    return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+  }
   function latestWeeklyDueDate(weekday){
     const date=new Date();date.setHours(0,0,0,0);
     date.setDate(date.getDate()-((date.getDay()-Number(weekday)+7)%7));
-    return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+    return dateKey(date);
+  }
+  function nextWeeklyDueDate(weekday, afterDate){
+    const date=new Date();
+    date.setHours(0,0,0,0);
+    if(afterDate){
+      const parts=afterDate.split('-').map(Number);
+      date.setFullYear(parts[0],parts[1]-1,parts[2]);
+    }
+    date.setDate(date.getDate()+((Number(weekday)-date.getDay()+7)%7));
+    return dateKey(date);
   }
   function weeklyDueState(entry){
-    if(entry.installment_due_weekday==null)return {label:'',dueToday:false,overdue:false};
+    if(entry.installment_due_weekday==null)return {label:'',dueToday:false,overdue:false,nextDate:''};
     const scheduled=latestWeeklyDueDate(entry.installment_due_weekday);
     const paidAfterSchedule=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled);
-    return {label:'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday),dueToday:!paidAfterSchedule&&scheduled===today(),overdue:!paidAfterSchedule&&scheduled<today()};
+    const nextDate=nextWeeklyDueDate(entry.installment_due_weekday, paidAfterSchedule ? dateKey(new Date()) : (scheduled < today() ? today() : ''));
+    return {
+      label:'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday),
+      dueToday:!paidAfterSchedule&&scheduled===today(),
+      overdue:!paidAfterSchedule&&scheduled<today(),
+      nextDate
+    };
   }
   const bangkokDate = value => {
     if (!value) return '';
@@ -135,7 +154,7 @@
       const history = paymentsFor(entry.id).slice().sort((a,b) => b.paid_on.localeCompare(a.paid_on));
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
-        '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small></div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
+        '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดขาย <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ส่งยอด/สัปดาห์ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
         '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' +
