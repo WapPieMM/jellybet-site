@@ -386,6 +386,15 @@
         updated_at: new Date().toISOString()
       }).eq('id', id);
       if (error) throw error;
+      if (entry.source_account_id) {
+        const {error: financialError} = await db.from('account_private_financials').update({
+          installment_due_weekday: scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null,
+          installment_schedule_type: scheduleType,
+          installment_due_date: scheduleType === 'weekly' ? null : $('editAccountingDueDate').value,
+          updated_at: new Date().toISOString()
+        }).eq('account_id', entry.source_account_id);
+        if (financialError) throw new Error('บันทึก Accounting แล้ว แต่ซิงก์รูปแบบการผ่อนกลับไปยัง Account ไม่สำเร็จ: ' + financialError.message);
+      }
       $('accountingEntryEditDialog').close();
       await loadData();
       setMessage('แก้ไขข้อมูลบัญชีเรียบร้อยแล้ว และคำนวณยอดค้างใหม่ ♡');
