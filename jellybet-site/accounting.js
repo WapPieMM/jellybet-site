@@ -111,7 +111,11 @@
     const monthEntries = entries.filter(entry => !entry.is_carryover && entry.sale_date >= bounds.start && entry.sale_date < bounds.end);
     const monthPayments = payments.filter(payment => payment.paid_on >= bounds.start && payment.paid_on < bounds.end);
     const sales = monthEntries.reduce((sum, entry) => sum + Number(entry.sale_amount || 0), 0);
-    const costs = monthEntries.reduce((sum, entry) => sum + Number(entry.cost_amount || 0), 0);
+    const costs = monthEntries.reduce((sum, entry) => {
+      // Released installment entries are closed rounds, not active sold-account costs.
+      const isReleasedInstallment = String(entry.notes || '').includes('ปิดรอบ: ลูกค้าหลุดผ่อน');
+      return sum + (isReleasedInstallment ? 0 : Number(entry.cost_amount || 0));
+    }, 0);
     const received = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const profit = sales - costs;
     const openEntries = entries.filter(entry => remaining(entry) > 0.009);
