@@ -33,21 +33,19 @@
     date.setDate(date.getDate()-((date.getDay()-Number(weekday)+7)%7));
     return dateKey(date);
   }
-  function nextWeeklyDueDate(weekday, afterDate){
+  function nextWeeklyDueDate(weekday, skipToday){
     const date=new Date();
     date.setHours(0,0,0,0);
-    if(afterDate){
-      const parts=afterDate.split('-').map(Number);
-      date.setFullYear(parts[0],parts[1]-1,parts[2]);
-    }
-    date.setDate(date.getDate()+((Number(weekday)-date.getDay()+7)%7));
+    let daysUntil=(Number(weekday)-date.getDay()+7)%7;
+    if(skipToday && daysUntil===0) daysUntil=7;
+    date.setDate(date.getDate()+daysUntil);
     return dateKey(date);
   }
   function weeklyDueState(entry){
     if(entry.installment_due_weekday==null)return {label:'',dueToday:false,overdue:false,nextDate:''};
     const scheduled=latestWeeklyDueDate(entry.installment_due_weekday);
     const paidAfterSchedule=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled);
-    const nextDate=nextWeeklyDueDate(entry.installment_due_weekday, paidAfterSchedule ? dateKey(new Date()) : (scheduled < today() ? today() : ''));
+    const nextDate=nextWeeklyDueDate(entry.installment_due_weekday, paidAfterSchedule);
     return {
       label:'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday),
       dueToday:!paidAfterSchedule&&scheduled===today(),
