@@ -79,7 +79,7 @@
 
       <section class="accounting-panel" data-accounting-panel="installments" hidden>
         <div class="accounting-section-heading"><div><p class="eyebrow">INSTALLMENT CONTROL</p><h2>จัดการยอดผ่อน</h2></div><span class="accounting-month-chip" id="installmentOpenTotal">ยอดค้าง ฿0</span></div>
-        <p class="accounting-description">บันทึกเงินมัดจำและค่างวด ระบบจะแสดงวันส่งยอดประจำสัปดาห์ เตือนเมื่อถึงกำหนดหรือเลยกำหนด และหักยอดคงเหลือจากประวัติรับเงินจริงโดยอัตโนมัติ</p>
+        <p class="accounting-description">บันทึกเงินมัดจำและค่างวด ระบบจะแสดงวันครบกำหนดตามรูปแบบที่เลือก เตือนเมื่อถึงกำหนดหรือเลยกำหนด และหักยอดคงเหลือจากประวัติรับเงินจริงโดยอัตโนมัติ</p>
         <div id="accountingInstallmentList" class="accounting-entry-list"><p class="accounting-empty">ยังไม่มีรายการบัญชี</p></div>
       </section>
 
@@ -105,7 +105,7 @@
         <label>ยอดที่ลูกค้าต้องชำระทั้งหมด / ยอดขายรวม (บาท)<input id="editAccountingSaleAmount" type="number" min="0" step="0.01" required></label>
         <label>ต้นทุนไอดี (บาท)<input id="editAccountingCostAmount" type="number" min="0" step="0.01" required></label>
         <label>ยอดตั้งต้นสำหรับคำนวณยอดค้าง (บาท)<input id="editAccountingOpeningBalance" type="number" min="0" step="0.01" required></label>
-        <label>ยอดส่งต่อสัปดาห์ (บาท)<input id="editAccountingWeeklyAmount" type="number" min="0" step="0.01"></label>
+        <label>ยอดชำระต่อรอบ (บาท)<input id="editAccountingWeeklyAmount" type="number" min="0" step="0.01"></label>
         <label>รูปแบบการส่งยอด<select id="editAccountingScheduleType"><option value="weekly">รายสัปดาห์</option><option value="daily">รายวัน</option><option value="every_other_day">วันเว้นวัน</option></select></label><div id="editAccountingWeekdayField"><label>วันส่งยอดประจำสัปดาห์<select id="editAccountingDueWeekday"><option value="">ไม่กำหนด</option><option value="0">วันอาทิตย์</option><option value="1">วันจันทร์</option><option value="2">วันอังคาร</option><option value="3">วันพุธ</option><option value="4">วันพฤหัสบดี</option><option value="5">วันศุกร์</option><option value="6">วันเสาร์</option></select></label></div><div id="editAccountingStartDateField"><label>วันที่เริ่มต้นรอบผ่อน<input id="editAccountingDueDate" type="date"></label></div>
         <label>หมายเหตุ<input id="editAccountingNotes" maxlength="500"></label>
         <p class="form-message" id="accountingEntryEditMessage" role="status"></p>
