@@ -149,7 +149,7 @@
     if(!db)return;
     const [{data,error},{data:costRows,error:costError}]=await Promise.all([
       db.from('accounts').select('*').order('created_at',{ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,accounting_handoff_at,actual_sale_price')
+      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
     if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
     if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_weekday_handoff.sql: '+costError.message,true);return;}
@@ -166,7 +166,8 @@
   function buildInstallmentDetails(){const plans=collectInstallmentPlans(),note=$('accountInstallmentDetails')?.value.trim()||'';if(!plans.length)return note;return installmentPlanMarker+JSON.stringify(plans)+(note?'\n'+note:'');}
   function populateInstallmentPlans(value=''){const raw=String(value||'');if(raw.startsWith(installmentPlanMarker)){const rest=raw.slice(installmentPlanMarker.length),end=rest.indexOf(']');try{const plans=JSON.parse(end>=0?rest.slice(0,end+1):rest);renderInstallmentPlans(plans);$('accountInstallmentDetails').value=end>=0?rest.slice(end+1).trim().replace(/^\n/,''):'';return;}catch(error){console.warn('Could not parse installment plan data',error);}}const months=raw.match(/ผ่อน (\d+) เดือน/),down=raw.match(/วางดาวน์ ([\d,.]+)฿/),total=raw.match(/ผ่อนต่ออีก ([\d,.]+)฿/),weekly=[...raw.matchAll(/งวดที่ \d+: ([\d,.]+) บาท\/สัปดาห์/g)].map(m=>m[1].replace(/,/g,''));if(months||down||total||weekly.length){renderInstallmentPlans([{months:months?.[1]||'',down:down?.[1]?.replace(/,/g,'')||'',total:total?.[1]?.replace(/,/g,'')||'',weekly:weekly[0]||''}]);$('accountInstallmentDetails').value=raw.split('\n').filter(line=>!/^(ผ่อน \d+ เดือน|วางดาวน์ |ผ่อนต่ออีก |งวดที่ \d+:)/.test(line)).join('\n').trim();}else{renderInstallmentPlans([]);$('accountInstallmentDetails').value=raw;}}
   $('addInstallmentPlan')?.addEventListener('click',()=>{const plans=collectInstallmentPlans();plans.push({});renderInstallmentPlans(plans);});
-  $('accountInstallmentPlans')?.addEventListener('input',e=>{if(e.target.matches('[data-plan-down], [data-plan-total]'))updateInstallmentPlanTotal(e.target.closest('[data-installment-plan]'));});
+  $('accountInstallmentPlans')?.addEventListener('input',e=>{if(e.target.matches('[data-plan-down], [data-plan-total]'))updateInstallmentPlanTotal(e.target.closest('[data-installment-plan]'));updateAccountStatusFields();});
+  $('accountInstallmentPlans')?.addEventListener('change',updateAccountStatusFields);
   $('accountInstallmentPlans')?.addEventListener('click',e=>{if(!e.target.closest('[data-remove-installment-plan]'))return;const card=e.target.closest('[data-installment-plan]');card?.remove();Array.from(document.querySelectorAll('[data-installment-plan]')).forEach((el,i)=>{const heading=el.querySelector('.account-installment-plan-heading strong');if(heading)heading.textContent='ตัวเลือกที่ '+(i+1);});});
   function collectAccountStructuredDetails(){const lines=[],login=[];if($('accountLoginGarena')?.checked)login.push('การีน่า');if($('accountLoginFacebook')?.checked)login.push('Facebook');if(login.length)lines.push('ล็อกอินด้วย: '+login.join(', '));const email=$('accountEmailStatus')?.value||'';if(email)lines.push('อีเมล: '+email+(email==='รอเปลี่ยน'&&$('accountEmailDays').value?' ('+$('accountEmailDays').value+' วัน)':''));const phone=$('accountPhoneStatus')?.value||'';if(phone)lines.push('เบอร์: '+phone+(phone==='รอเปลี่ยน'&&$('accountPhoneDate').value?' วันที่ '+$('accountPhoneDate').value:''));const other=$('accountOtherDetails')?.value.trim();if(other)lines.push('อื่น ๆ: '+other);return lines.join('\n');}
   function populateAccountStructuredDetails(value=''){const lines=String(value||'').split(/\r?\n/),get=p=>lines.find(x=>x.startsWith(p))?.slice(p.length).trim()||'',login=get('ล็อกอินด้วย:');$('accountLoginGarena').checked=login.includes('การีน่า');$('accountLoginFacebook').checked=login.includes('Facebook');const email=get('อีเมล:');$('accountEmailStatus').value=['ยกอีเมล','รอเปลี่ยน','พร้อมเปลี่ยน','ตาย'].find(x=>email.startsWith(x))||'';$('accountEmailDays').value=email.match(/\((\d+) วัน\)/)?.[1]||'';const phone=get('เบอร์:');$('accountPhoneStatus').value=['รอเปลี่ยน','พร้อมเปลี่ยน'].find(x=>phone.startsWith(x))||'';$('accountPhoneDate').value=phone.match(/วันที่ (.+)$/)?.[1]||'';$('accountOtherDetails').value=get('อื่น ๆ:');}
@@ -181,9 +182,16 @@
   }
   function updateAccountStatusFields(){
     const status=$('accountStatus')?.value||'available';
-    const installmentField=$('accountInstallmentDueDateField'),soldField=$('accountActualSalePriceField');
-    const dueInput=$('accountInstallmentDueWeekday'),saleInput=$('accountActualSalePrice');
+    const installmentField=$('accountInstallmentDueDateField'),planField=$('accountInstallmentPlanField'),soldField=$('accountActualSalePriceField');
+    const dueInput=$('accountInstallmentDueWeekday'),planSelect=$('accountInstallmentPlanIndex'),saleInput=$('accountActualSalePrice');
     if(installmentField)installmentField.hidden=status!=='installment';
+    if(planField)planField.hidden=status!=='installment';
+    if(planSelect){
+      const prior=planSelect.value;
+      const plans=collectInstallmentPlans();
+      planSelect.innerHTML=plans.length?plans.map((plan,index)=>'<option value="'+index+'">'+escapeHtml('ตัวเลือกที่ '+(index+1)+' · '+Number(plan.months||0)+' เดือน · ดาวน์ '+Number(plan.down||0).toLocaleString('th-TH')+' · ผ่อน '+Number(plan.total||0).toLocaleString('th-TH'))+'</option>').join(''):'<option value="0">ไม่พบแผนผ่อน — ใช้ราคา Account</option>';
+      planSelect.value=plans.some((plan,index)=>String(index)===prior)?prior:'0';
+    }
     if(soldField)soldField.hidden=status!=='sold';
     if(dueInput)dueInput.required=status==='installment';
     if(saleInput)saleInput.required=status==='sold';
@@ -313,6 +321,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       const transitionedToAccounting=['installment','sold'].includes(nextStatus)&&previousStatus==='available';
       const accountingHandoffAt=transitionedToAccounting?new Date().toISOString():(existingFinancials.accounting_handoff_at||existing?.sale_started_at||null);
       const sale_started_at=transitionedToAccounting?accountingHandoffAt:(existing?.sale_started_at||null);
+      const installmentPlanIndex=nextStatus==='installment'?Number($('accountInstallmentPlanIndex').value||0):0;
       if(nextStatus==='installment'){
         installmentDueWeekday=$('accountInstallmentDueWeekday').value;
         if(installmentDueWeekday==='')throw new Error('กรุณาเลือกวันประจำสัปดาห์ที่ลูกค้าต้องส่งยอด');
@@ -334,9 +343,17 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       let savedAccountId=id;
       if(id){const {error}=await db.from('accounts').update(payload).eq('id',id);if(error)throw error;}
       else{const {data,error}=await db.from('accounts').insert(payload).select('id').single();if(error)throw error;savedAccountId=data.id;}
-      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),accounting_handoff_at:accountingHandoffAt,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
+      const {error:costError}=await db.from('account_private_financials').upsert({account_id:savedAccountId,acquisition_cost:Number(costValue),installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),installment_plan_index:installmentPlanIndex,accounting_handoff_at:accountingHandoffAt,actual_sale_price:actualSalePrice,updated_at:new Date().toISOString()},{onConflict:'account_id'});
       if(costError)throw costError;
-      resetAccountForm();await refreshAccounts();setMessage('accountMessage','บันทึกรายการและต้นทุนส่วนตัวเรียบร้อยแล้ว ♡');toast('บันทึก Account แล้ว ♡');
+      if(['installment','sold'].includes(nextStatus)&&accountingHandoffAt){
+        const {data:accountingEntry,error:accountingVerifyError}=await db.from('accounting_entries').select('id').eq('source_account_id',savedAccountId).maybeSingle();
+        if(accountingVerifyError)throw new Error('บันทึก Account แล้ว แต่ตรวจสอบ Accounting ไม่สำเร็จ: '+accountingVerifyError.message);
+        if(!accountingEntry)throw new Error('บันทึกสถานะแล้ว แต่ยังไม่พบรายการใน Accounting อัตโนมัติ กรุณารัน Migration 20261103_account_auto_sync.sql ใน Supabase SQL Editor แล้วบันทึก Account อีกครั้ง');
+      }
+      resetAccountForm();await refreshAccounts();
+      const sentToAccounting=['installment','sold'].includes(nextStatus)&&!!accountingHandoffAt;
+      setMessage('accountMessage',sentToAccounting?'บันทึก Account และส่งเข้า Accounting อัตโนมัติแล้ว ♡':'บันทึกรายการและต้นทุนส่วนตัวเรียบร้อยแล้ว ♡');
+      toast(sentToAccounting?'ส่งรายการเข้า Accounting แล้ว ♡':'บันทึก Account แล้ว ♡');
     }catch(err){setMessage('accountMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
   $('cancelAccountEdit')?.addEventListener('click',resetAccountForm);
@@ -354,6 +371,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
     const financial=accountFinancials.get(String(a.id))||{};
     $('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';
     $('accountInstallmentDueWeekday').value=financial.installment_due_weekday==null?'':String(financial.installment_due_weekday);
+    $('accountInstallmentPlanIndex').value=financial.installment_plan_index==null?'0':String(financial.installment_plan_index);
     $('accountActualSalePrice').value=financial.actual_sale_price??'';
     $('accountStatus').value=statusOverride||a.status||'available';
     updateAccountStatusFields();
