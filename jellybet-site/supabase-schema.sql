@@ -95,7 +95,6 @@ create table if not exists public.account_private_financials (
   installment_due_date date,
   installment_due_weekday smallint check (installment_due_weekday is null or installment_due_weekday between 0 and 6),
   installment_schedule_type text not null default 'weekly' check (installment_schedule_type in ('weekly','daily','every_other_day')),
-  installment_due_date date,
   installment_plan_index smallint not null default 0 check (installment_plan_index >= 0),
   accounting_handoff_at timestamptz,
   actual_sale_price numeric(12,2) check (actual_sale_price is null or actual_sale_price >= 0),
