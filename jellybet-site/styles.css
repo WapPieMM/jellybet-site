@@ -797,3 +797,77 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
 .account-admin-conditional select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;color:var(--ink);font:inherit}
 
 .account-admin-conditional select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;color:var(--ink);font:inherit}
+
+/* Account detail responsive layout: remove empty image panel and fit uploaded artwork */
+.account-detail-card{
+  display:grid;
+  grid-template-columns:minmax(0,1.08fr) minmax(280px,.92fr);
+  align-items:start;
+  overflow:hidden;
+}
+.account-detail-media{
+  display:block;
+  align-self:start;
+  width:100%;
+  height:max-content;
+  min-width:0;
+  padding:0;
+  overflow:hidden;
+  background:transparent;
+}
+.account-detail-media:after{content:none!important}
+.account-detail-image:not(.account-image-placeholder){
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  object-fit:contain;
+  object-position:center top;
+  background:transparent!important;
+  filter:none;
+  border:0;
+  border-radius:0;
+}
+.account-detail-content{
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+  overflow-wrap:anywhere;
+}
+.account-detail-content h1{overflow-wrap:anywhere}
+.account-detail-footer .account-menu-link{width:100%;box-sizing:border-box;text-align:center;white-space:normal}
+@media(max-width:679px){
+  .account-page-shell{width:min(100% - 20px,100%);padding-left:0;padding-right:0}
+  .account-page-main{padding-top:18px}
+  .account-detail-card{
+    grid-template-columns:minmax(0,1fr);
+    border-radius:22px;
+  }
+  .account-detail-media{
+    width:100%;
+    height:auto;
+    max-height:none;
+    background:transparent;
+  }
+  .account-detail-image:not(.account-image-placeholder){
+    width:100%;
+    height:auto!important;
+    max-height:none!important;
+    object-fit:contain;
+  }
+  .account-detail-content{padding:18px}
+}
+@media(min-width:680px) and (max-width:900px){
+  .account-detail-card{grid-template-columns:minmax(0,1fr) minmax(250px,.9fr)}
+  .account-detail-content{padding:18px}
+}
+@supports(padding:max(0px)){
+  .account-page-shell{
+    padding-left:max(0px,env(safe-area-inset-left));
+    padding-right:max(0px,env(safe-area-inset-right));
+  }
+}
+
