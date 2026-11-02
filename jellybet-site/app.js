@@ -338,7 +338,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
           installmentDueWeekday='';installmentDueDate=$('accountInstallmentDueDate').value;
           if(!installmentDueDate)throw new Error('กรุณาเลือกวันที่เริ่มต้นรอบผ่อน');
         }
-      } else if(nextStatus==='sold') { installmentDueWeekday='';installmentDueDate=''; }
+      } else if(nextStatus==='sold'||nextStatus==='available') { installmentDueWeekday='';installmentDueDate=''; }
       if(nextStatus==='sold'){
         const actualSaleValue=$('accountActualSalePrice').value.trim();
         if(actualSaleValue===''||!Number.isFinite(Number(actualSaleValue))||Number(actualSaleValue)<0.01)throw new Error('กรุณากรอกราคาขายจริงให้ถูกต้อง');
