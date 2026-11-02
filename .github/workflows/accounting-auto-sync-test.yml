@@ -1,0 +1,41 @@
+name: Accounting auto-sync integration
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261103_account_auto_sync.sql'
+      - 'supabase/tests/**'
+      - '.github/workflows/accounting-auto-sync-test.yml'
+  workflow_dispatch:
+
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jellybet_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jellybet_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap a minimal Supabase-compatible PostgreSQL schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d jellybet_test -v ON_ERROR_STOP=1 -f supabase/tests/account_auto_sync_setup.sql
+      - name: Apply Account auto-sync migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d jellybet_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261103_account_auto_sync.sql
+      - name: Run Accounting auto-sync integration tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d jellybet_test -v ON_ERROR_STOP=1 -f supabase/tests/account_auto_sync_smoke.sql
