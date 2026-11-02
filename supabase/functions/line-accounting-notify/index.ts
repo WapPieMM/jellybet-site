@@ -144,6 +144,15 @@ async function handleDailyReminder(req: Request): Promise<Response> {
     `รวมยอดคงเหลือ: ${money(totalRemaining)}`,
   ].join("\n");
 
+  // Recover a stale lock left by an interrupted invocation; never clear today's sent record.
+  const staleBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const { error: staleError } = await supabase.from("line_notification_runs")
+    .delete().eq("run_date", today).eq("status", "sending").lt("created_at", staleBefore);
+  if (staleError) {
+    console.error("Could not clear stale notification lock:", staleError.message);
+    return json({ error: "Could not prepare notification run" }, 500);
+  }
+
   // Unique run_date prevents duplicate pushes if the scheduled invocation retries.
   const { error: runError } = await supabase.from("line_notification_runs")
     .insert({ run_date: today, status: "sending" });
