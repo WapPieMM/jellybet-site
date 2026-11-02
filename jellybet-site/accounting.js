@@ -549,9 +549,9 @@
       releaseButton.disabled = true;
       try {
         const {error:entryError} = await db.from('accounting_entries').update({
-          sale_amount: received,
+          sale_amount: profit,
           opening_balance: received,
-          cost_amount: originalCost,
+          cost_amount: netCost,
           weekly_amount: 0,
           installment_due_weekday: null,
           notes: [entry.notes, 'ปิดรอบ: ลูกค้าหลุดผ่อน; เงินรับรวม ' + received + ' บาท; ต้นทุนสุทธิหลังหักเงินรับ ' + netCost + ' บาท; กำไร ' + profit + ' บาท'].filter(Boolean).join(' | '),
