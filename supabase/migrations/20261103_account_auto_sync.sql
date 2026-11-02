@@ -1,4 +1,7 @@
 -- Automatically sync newly transitioned Account records into the private Accounting ledger.
+-- Ensure the Account status constraint supports all storefront statuses.
+alter table public.accounts drop constraint if exists accounts_status_check;
+alter table public.accounts add constraint accounts_status_check check (status in ('available','installment','sold'));
 -- The trigger runs after account_private_financials is saved, so both the Account status
 -- and its private financial values are available.
 alter table public.account_private_financials
@@ -40,7 +43,10 @@ begin
   end if;
 
   v_handoff_at := coalesce(new.accounting_handoff_at, v_account.sale_started_at);
-  if v_handoff_at is null then
+  if v_handoff_at is null or coalesce(v_account.accounting_carryover,false) then
+    return new;
+  end if;
+  if v_handoff_at < timestamptz '2026-11-01 00:00:00+07' then
     return new;
   end if;
 
