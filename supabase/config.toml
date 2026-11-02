@@ -1,0 +1,2 @@
+[functions.line-accounting-notify]
+verify_jwt = false
