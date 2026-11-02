@@ -6,6 +6,9 @@
   const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', portfolio_drive_url: '', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'', mood_bunny_url:'', mood_vanity_url:'' };
   let settings = { ...defaultSettings }, reviews = [], accounts = [], musicTracks = [], currentUser = null;
   let accountCosts = new Map();
+  let accountDescriptionOriginal = '';
+  let accountDescriptionDirty = false;
+  let accountStructuredDetailsDirty = false;
   const contactDefs = [
     {key:'line',label:'LINE',icon:'♡',hint:'พูดคุยและสอบถามข้อมูล'},
     {key:'x',label:'X / Twitter',icon:'𝕏',hint:'ติดตามข่าวสารของร้าน'},
@@ -164,14 +167,30 @@
   $('accountInstallmentPlans')?.addEventListener('input',e=>{if(e.target.matches('[data-plan-down], [data-plan-total]'))updateInstallmentPlanTotal(e.target.closest('[data-installment-plan]'));});
   $('accountInstallmentPlans')?.addEventListener('click',e=>{if(!e.target.closest('[data-remove-installment-plan]'))return;const card=e.target.closest('[data-installment-plan]');card?.remove();Array.from(document.querySelectorAll('[data-installment-plan]')).forEach((el,i)=>{const heading=el.querySelector('.account-installment-plan-heading strong');if(heading)heading.textContent='ตัวเลือกที่ '+(i+1);});});
   function collectAccountStructuredDetails(){const lines=[],login=[];if($('accountLoginGarena')?.checked)login.push('การีน่า');if($('accountLoginFacebook')?.checked)login.push('Facebook');if(login.length)lines.push('ล็อกอินด้วย: '+login.join(', '));const email=$('accountEmailStatus')?.value||'';if(email)lines.push('อีเมล: '+email+(email==='รอเปลี่ยน'&&$('accountEmailDays').value?' ('+$('accountEmailDays').value+' วัน)':''));const phone=$('accountPhoneStatus')?.value||'';if(phone)lines.push('เบอร์: '+phone+(phone==='รอเปลี่ยน'&&$('accountPhoneDate').value?' วันที่ '+$('accountPhoneDate').value:''));const other=$('accountOtherDetails')?.value.trim();if(other)lines.push('อื่น ๆ: '+other);return lines.join('\n');}
-  function populateAccountStructuredDetails(value=''){const lines=String(value||'').split(/\r?\n/),get=p=>lines.find(x=>x.startsWith(p))?.slice(p.length).trim()||'',login=get('ล็อกอินด้วย:');$('accountLoginGarena').checked=login.includes('การีน่า');$('accountLoginFacebook').checked=login.includes('Facebook');const email=get('อีเมล:');$('accountEmailStatus').value=['ยกอีเมล','รอเปลี่ยน','พร้อมเปลี่ยน','ตาย'].find(x=>email.startsWith(x))||'';$('accountEmailDays').value=email.match(/\((\d+) วัน\)/)?.[1]||'';const phone=get('เบอร์:');$('accountPhoneStatus').value=['รอเปลี่ยน','พร้อมเปลี่ยน'].find(x=>phone.startsWith(x))||'';$('accountPhoneDate').value=phone.match(/วันที่ (.+)$/)?.[1]||'';$('accountOtherDetails').value=get('อื่น ๆ:');if(!lines.some(x=>/^(ล็อกอินด้วย:|อีเมล:|เบอร์:|อื่น ๆ:)/.test(x)))$('accountOtherDetails').value=value||'';}
+  function populateAccountStructuredDetails(value=''){const lines=String(value||'').split(/\r?\n/),get=p=>lines.find(x=>x.startsWith(p))?.slice(p.length).trim()||'',login=get('ล็อกอินด้วย:');$('accountLoginGarena').checked=login.includes('การีน่า');$('accountLoginFacebook').checked=login.includes('Facebook');const email=get('อีเมล:');$('accountEmailStatus').value=['ยกอีเมล','รอเปลี่ยน','พร้อมเปลี่ยน','ตาย'].find(x=>email.startsWith(x))||'';$('accountEmailDays').value=email.match(/\((\d+) วัน\)/)?.[1]||'';const phone=get('เบอร์:');$('accountPhoneStatus').value=['รอเปลี่ยน','พร้อมเปลี่ยน'].find(x=>phone.startsWith(x))||'';$('accountPhoneDate').value=phone.match(/วันที่ (.+)$/)?.[1]||'';$('accountOtherDetails').value=get('อื่น ๆ:');}
 
+  function extractPreservedAdditionalDescription(value=''){
+    const source=String(value||'').trim();
+    if(!source)return '';
+    const hasStructuredLines=/^(ล็อกอินด้วย:|อีเมล:|เบอร์:|อื่น ๆ:)/m.test(source);
+    if(!hasStructuredLines)return source;
+    const separator=source.indexOf(String.fromCharCode(10)+String.fromCharCode(10));
+    return separator>=0?source.slice(separator+2).trim():'';
+  }
   function resetAccountForm(){
     $('accountForm').reset();$('editAccountId').value='';$('accountStatus').value='available';renderInstallmentPlans([]);
+    accountDescriptionOriginal='';accountDescriptionDirty=false;accountStructuredDetailsDirty=false;
     $('accountFormTitle').textContent='เพิ่ม Account';$('cancelAccountEdit').hidden=true;
     const img=$('accountImagePreview');if(img){img.hidden=true;img.removeAttribute('src');}
     setMessage('accountMessage','');
   }
+  $('accountDescription')?.addEventListener('input',()=>{accountDescriptionDirty=true;});
+  ['accountLoginGarena','accountLoginFacebook','accountEmailStatus','accountEmailDays','accountPhoneStatus','accountPhoneDate','accountOtherDetails'].forEach(id=>{
+    const field=$(id);
+    if(!field)return;
+    field.addEventListener('input',()=>{accountStructuredDetailsDirty=true;});
+    field.addEventListener('change',()=>{accountStructuredDetailsDirty=true;});
+  });
   let reviewsExpanded=false;
   function renderReviews(){
     const published=reviews.filter(r=>r.published);
@@ -275,7 +294,14 @@
       const file=$('accountImageFile').files[0];if(file)image_url=await uploadImage(file,'account-images','admin');
       const costValue=$('accountCost').value.trim();
       if(costValue===''||!Number.isFinite(Number(costValue))||Number(costValue)<0)throw new Error('กรุณากรอกต้นทุนไอดีให้ถูกต้อง');
-      const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'available';const sale_started_at=existing?.sale_started_at||((previousStatus==='available'&&(nextStatus==='installment'||nextStatus==='sold'))?new Date().toISOString():null);const payload={title:$('accountTitle').value.trim(),description:[collectAccountStructuredDetails(),$('accountDescription').value.trim()].filter(Boolean).join('\n\n'),installment_details:buildInstallmentDetails(),price:Number($('accountPrice').value),status:nextStatus,sale_started_at,image_url,updated_at:new Date().toISOString()};
+const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'available';const sale_started_at=existing?.sale_started_at||((previousStatus==='available'&&(nextStatus==='installment'||nextStatus==='sold'))?new Date().toISOString():null);
+      const structuredDescription=collectAccountStructuredDetails();
+      const typedAdditionalDescription=$('accountDescription').value.trim();
+      let description;
+      if(existing&&!accountDescriptionDirty&&!accountStructuredDetailsDirty)description=accountDescriptionOriginal;
+      else if(existing&&!accountDescriptionDirty)description=[structuredDescription,extractPreservedAdditionalDescription(accountDescriptionOriginal)].filter(Boolean).join(String.fromCharCode(10)+String.fromCharCode(10));
+      else description=[structuredDescription,typedAdditionalDescription].filter(Boolean).join(String.fromCharCode(10)+String.fromCharCode(10));
+      const payload={title:$('accountTitle').value.trim(),description,installment_details:buildInstallmentDetails(),price:Number($('accountPrice').value),status:nextStatus,sale_started_at,image_url,updated_at:new Date().toISOString()};
       let savedAccountId=id;
       if(id){const {error}=await db.from('accounts').update(payload).eq('id',id);if(error)throw error;}
       else{const {data,error}=await db.from('accounts').insert(payload).select('id').single();if(error)throw error;savedAccountId=data.id;}
@@ -287,9 +313,9 @@
   $('cancelAccountEdit')?.addEventListener('click',resetAccountForm);
   $('accountImageFile')?.addEventListener('change',()=>previewFile($('accountImageFile'),$('accountImagePreview')));
   ['adminAccountList','installmentAccountList'].forEach(listId=>$(listId)?.addEventListener('click',async e=>{
-    const installmentEdit=e.target.closest('[data-edit-installment]');if(installmentEdit){const a=accounts.find(x=>String(x.id)===installmentEdit.dataset.editInstallment);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';populateAccountStructuredDetails(a.description||'');$('accountDescription').value=(a.description||'').split(/\n\n/).slice(-1)[0]||'';populateInstallmentPlans(a.installment_details||'');$('accountPrice').value=a.price??'';$('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไขรายละเอียดการผ่อน';$('cancelAccountEdit').hidden=false;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab==='accountsAdmin'));['settingsTab','themeAdminTab','accountsAdminTab','installmentAdminTab','reviewsAdminTab'].forEach(id=>{const el=$(id);if(el)el.hidden=id!=='accountsAdminTab';});$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    const installmentEdit=e.target.closest('[data-edit-installment]');if(installmentEdit){const a=accounts.find(x=>String(x.id)===installmentEdit.dataset.editInstallment);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';populateAccountStructuredDetails(a.description||'');accountDescriptionOriginal=String(a.description||'');accountDescriptionDirty=false;accountStructuredDetailsDirty=false;$('accountDescription').value='';populateInstallmentPlans(a.installment_details||'');$('accountPrice').value=a.price??'';$('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไขรายละเอียดการผ่อน';$('cancelAccountEdit').hidden=false;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab==='accountsAdmin'));['settingsTab','themeAdminTab','accountsAdminTab','installmentAdminTab','reviewsAdminTab'].forEach(id=>{const el=$(id);if(el)el.hidden=id!=='accountsAdminTab';});$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
     const edit=e.target.closest('[data-edit-account]'),toggle=e.target.closest('[data-toggle-account]'),del=e.target.closest('[data-delete-account]');
-    if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';populateAccountStructuredDetails(a.description||'');$('accountDescription').value=(a.description||'').split(/\n\n/).slice(-1)[0]||'';populateInstallmentPlans(a.installment_details||'');$('accountPrice').value=a.price??'';$('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไข Account';$('cancelAccountEdit').hidden=false;$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;$('editAccountId').value=a.id;$('accountTitle').value=a.title||'';populateAccountStructuredDetails(a.description||'');accountDescriptionOriginal=String(a.description||'');accountDescriptionDirty=false;accountStructuredDetailsDirty=false;$('accountDescription').value='';populateInstallmentPlans(a.installment_details||'');$('accountPrice').value=a.price??'';$('accountCost').value=accountCosts.has(String(a.id))?String(accountCosts.get(String(a.id))):'';$('accountStatus').value=a.status||'available';const img=$('accountImagePreview');if(img){img.src=a.image_url||'';img.hidden=!a.image_url;}$('accountFormTitle').textContent='แก้ไข Account';$('cancelAccountEdit').hidden=false;$('accountForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
     if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const nextStatus=a.status==='available'?'installment':a.status==='installment'?'sold':'available';const sale_started_at=(nextStatus==='installment'||nextStatus==='sold')?(a.sale_started_at||(a.status==='available'?new Date().toISOString():null)):null;const {error}=await db.from('accounts').update({status:nextStatus,sale_started_at,updated_at:new Date().toISOString()}).eq('id',a.id);if(error){toast('เปลี่ยนสถานะ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('อัปเดตสถานะ Account แล้ว ♡');return;}
     if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('ลบ Account แล้ว');}
   }));
