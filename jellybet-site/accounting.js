@@ -153,9 +153,9 @@
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
-        '<div class="accounting-entry-numbers"><span>ยอดขาย <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ส่งยอด/สัปดาห์ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
+        '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ส่งยอด/สัปดาห์ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
-        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + (entry.installment_due_weekday!=null && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
@@ -532,6 +532,47 @@
       try { await createImport(card); }
       catch (error) { setMessage('นำเข้าไม่สำเร็จ: ' + error.message, true); }
       finally { importButton.disabled = false; importButton.textContent = 'นำเข้าบัญชีรายการนี้'; }
+      return;
+    }
+    const releaseButton = event.target.closest('[data-release-installment]');
+    if (releaseButton) {
+      const entry = entryById(releaseButton.dataset.releaseInstallment);
+      if (!entry || !entry.source_account_id) return;
+      const received = totalPaid(entry.id);
+      const originalCost = Number(entry.cost_amount || 0);
+      const netCost = Math.max(0, originalCost - received);
+      const profit = Math.max(0, received - originalCost);
+      const summary = profit > 0
+        ? 'เงินที่รับ ' + money(received) + ' มากกว่าต้นทุน ' + money(originalCost) + ' ส่วนต่างเป็นกำไร ' + money(profit)
+        : 'เงินที่รับ ' + money(received) + ' จะนำไปหักต้นทุน ' + money(originalCost) + ' เหลือต้นทุนสุทธิ ' + money(netCost);
+      if (!window.confirm('ยืนยันว่าลูกค้าหลุดผ่อนและคืน Account เป็นพร้อมขาย?\n\n' + summary + '\n\nระบบจะเก็บประวัติรับเงินเดิมไว้ และปิดรอบผ่อนนี้')) return;
+      releaseButton.disabled = true;
+      try {
+        const {error:entryError} = await db.from('accounting_entries').update({
+          sale_amount: received,
+          opening_balance: received,
+          cost_amount: originalCost,
+          weekly_amount: 0,
+          installment_due_weekday: null,
+          notes: [entry.notes, 'ปิดรอบ: ลูกค้าหลุดผ่อน; เงินรับรวม ' + received + ' บาท; ต้นทุนสุทธิหลังหักเงินรับ ' + netCost + ' บาท; กำไร ' + profit + ' บาท'].filter(Boolean).join(' | '),
+          source_account_id: null,
+          updated_at: new Date().toISOString()
+        }).eq('id', entry.id);
+        if (entryError) throw entryError;
+        const {error:accountError} = await db.from('accounts').update({status:'available',sale_started_at:null,updated_at:new Date().toISOString()}).eq('id',entry.source_account_id);
+        if (accountError) throw accountError;
+        const {error:financialError} = await db.from('account_private_financials').update({
+          accounting_handoff_at:null,
+          actual_sale_price:null,
+          updated_at:new Date().toISOString()
+        }).eq('account_id',entry.source_account_id);
+        if (financialError) throw financialError;
+        await loadData();
+        setMessage('ปิดรอบผ่อนและคืน Account เป็นพร้อมขายแล้ว ประวัติรับเงินเดิมยังอยู่ครบ ♡');
+      } catch (error) {
+        setMessage('ดำเนินการหลุดผ่อนไม่สำเร็จ: ' + error.message, true);
+        releaseButton.disabled = false;
+      }
       return;
     }
     const editEntryButton = event.target.closest('[data-edit-entry]');
