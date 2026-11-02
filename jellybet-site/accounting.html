@@ -97,6 +97,21 @@
       </section>
     </section>
 
+    <dialog class="accounting-payment-dialog" id="accountingEntryEditDialog">
+      <form id="accountingEntryEditForm" method="dialog">
+        <div class="accounting-dialog-heading"><div><p class="eyebrow">EDIT LEDGER</p><h2>แก้ไขรายการบัญชี</h2><p id="accountingEntryEditTitle"></p></div><button type="button" id="closeAccountingEntryEdit" aria-label="ปิด">×</button></div>
+        <input type="hidden" id="editAccountingEntryId">
+        <label>วันที่ขาย<input id="editAccountingSaleDate" type="date" required></label>
+        <label>ยอดขายจริง (บาท)<input id="editAccountingSaleAmount" type="number" min="0" step="0.01" required></label>
+        <label>ต้นทุนไอดี (บาท)<input id="editAccountingCostAmount" type="number" min="0" step="0.01" required></label>
+        <label>ยอดตั้งต้นสำหรับคำนวณยอดค้าง (บาท)<input id="editAccountingOpeningBalance" type="number" min="0" step="0.01" required></label>
+        <label>ยอดส่งต่อสัปดาห์ (บาท)<input id="editAccountingWeeklyAmount" type="number" min="0" step="0.01"></label>
+        <label>วันส่งยอดประจำสัปดาห์<select id="editAccountingDueWeekday"><option value="">ไม่กำหนด</option><option value="0">วันอาทิตย์</option><option value="1">วันจันทร์</option><option value="2">วันอังคาร</option><option value="3">วันพุธ</option><option value="4">วันพฤหัสบดี</option><option value="5">วันศุกร์</option><option value="6">วันเสาร์</option></select></label>
+        <label>หมายเหตุ<input id="editAccountingNotes" maxlength="500"></label>
+        <p class="form-message" id="accountingEntryEditMessage" role="status"></p>
+        <div class="accounting-dialog-actions"><button type="button" class="secondary-button" id="cancelAccountingEntryEdit">ยกเลิก</button><button type="submit" class="primary-button">บันทึกการแก้ไข</button></div>
+      </form>
+    </dialog>
     <dialog class="accounting-payment-dialog" id="accountingPaymentDialog">
       <form id="accountingPaymentForm" method="dialog">
         <div class="accounting-dialog-heading"><div><p class="eyebrow">ADD PAYMENT</p><h2>บันทึกรับเงิน</h2><p id="accountingPaymentAccount"></p></div><button type="button" id="closeAccountingPayment" aria-label="ปิด">×</button></div>
