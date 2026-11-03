@@ -904,3 +904,13 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
  .accounting-due-today-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}
  .accounting-due-action{grid-column:1/-1;width:100%}
 }
+
+
+/* Highlight projected profit for each installment account */
+.accounting-expected-profit{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding:11px 13px;border-radius:13px;border:1px solid #dcebdc;background:linear-gradient(100deg,#f0f8f0,#f8fcf7)}
+.accounting-expected-profit span{color:#66876b;font-size:11px;font-weight:600}
+.accounting-expected-profit strong{margin-left:auto;color:#397c4c;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.accounting-expected-profit small{flex-basis:100%;color:#8ca58f;font-size:9px}
+.accounting-expected-profit.is-negative{border-color:#f0dada;background:linear-gradient(100deg,#fff2f1,#fff9f8)}
+.accounting-expected-profit.is-negative span,.accounting-expected-profit.is-negative small{color:#ad7772}
+.accounting-expected-profit.is-negative strong{color:#b94e48}
