@@ -136,24 +136,57 @@
     )).join('') : '<p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p>';
   }
 
+  function isScheduledOn(entry, date) {
+    const type = entry.installment_schedule_type || 'weekly';
+    if (type === 'weekly') {
+      return entry.installment_due_weekday != null && dateFromKey(date).getUTCDay() === Number(entry.installment_due_weekday);
+    }
+    const anchor = entry.installment_due_date;
+    if (!anchor || date < anchor) return false;
+    const elapsed = (dateFromKey(date) - dateFromKey(anchor)) / 86400000;
+    return elapsed % (type === 'every_other_day' ? 2 : 1) === 0;
+  }
+
+  function wasPaidForSchedule(entry, date) {
+    return paymentsFor(entry.id).some(payment => payment.paid_on >= date && payment.paid_on <= today());
+  }
+
+  function renderDueToday() {
+    const date = today();
+    const dueEntries = entries.filter(entry => remaining(entry) > 0.009 && isScheduledOn(entry, date))
+      .sort((a,b) => remaining(b) - remaining(a));
+    const paid = dueEntries.filter(entry => wasPaidForSchedule(entry, date));
+    const pending = dueEntries.filter(entry => !wasPaidForSchedule(entry, date));
+    $('accountingDueTodayDate').textContent = formatDate(date);
+    $('accountingDueTodayCount').textContent = dueEntries.length + ' รายการ';
+    $('accountingDueTodayPending').textContent = 'ยังไม่ส่งยอด ' + pending.length;
+    $('accountingDueTodayPaid').textContent = 'ส่งยอดแล้ว ' + paid.length;
+    $('accountingDueTodayList').innerHTML = dueEntries.length ? dueEntries.map(entry => {
+      const isPaid = wasPaidForSchedule(entry, date);
+      return '<article class="accounting-due-today-row"><div class="accounting-due-today-name"><strong>' + escapeHtml(entry.account_title) + '</strong><small>ยอดที่ต้องส่ง ' + (Number(entry.weekly_amount) > 0 ? money(entry.weekly_amount) : 'ยังไม่ได้กำหนด') + ' · คงเหลือ ' + money(remaining(entry)) + '</small></div><span class="accounting-send-state ' + (isPaid ? 'is-sent' : 'is-pending') + '">' + (isPaid ? '✓ ส่งยอดแล้ว' : 'ยังไม่ส่งยอด') + '</span>' + (isPaid ? '<span class="accounting-paid-note">รับเงินแล้ว</span>' : '<button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">บันทึกรับเงิน</button>') + '</article>';
+    }).join('') : '<p class="accounting-empty">วันนี้ไม่มีรายการที่ต้องส่งยอด ♡</p>';
+  }
+
   function renderInstallments() {
-    const open = entries.filter(entry => remaining(entry) > 0.009).sort((a,b) => a.sale_date.localeCompare(b.sale_date));
+    const open = entries.filter(entry => remaining(entry) > 0.009);
     const total = open.reduce((sum, entry) => sum + remaining(entry), 0);
     $('installmentOpenTotal').textContent = 'ยอดค้าง ' + money(total);
+    $('installmentActiveCount').textContent = 'กำลังติดผ่อน ' + open.length + ' รายการ';
+    renderDueToday();
     $('accountingInstallmentList').innerHTML = entries.length ? entries.slice().sort((a,b) => remaining(b)-remaining(a)).map(entry => {
       const due = remaining(entry);
       const schedule = scheduleDueState(entry);
       const overdue = due > 0.009 && schedule.overdue;
       const dueToday = due > 0.009 && schedule.dueToday;
-      const statusClass = due <= 0.009 ? 'is-paid' : overdue ? 'is-overdue' : 'is-open';
-      const statusLabel = due <= 0.009 ? 'ปิดยอดแล้ว' : overdue ? 'เลยกำหนดส่งยอด' : dueToday ? 'ถึงวันส่งยอดวันนี้' : 'กำลังผ่อน';
+      const statusClass = due <= 0.009 ? 'is-paid' : overdue ? 'is-overdue' : dueToday ? 'is-open' : 'is-open';
+      const statusLabel = due <= 0.009 ? 'ปิดยอดแล้ว' : overdue ? 'เลยกำหนดส่งยอด' : dueToday ? 'ถึงวันส่งยอดวันนี้ · ยังไม่ส่ง' : 'กำลังผ่อน';
       const history = paymentsFor(entry.id).slice().sort((a,b) => b.paid_on.localeCompare(a.paid_on));
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่อรอบ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
-        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี / เลื่อนวันส่งยอด</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">เลื่อนวันส่งยอด / แก้ไขข้อมูล</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
@@ -335,12 +368,15 @@
     $('editAccountingCostAmount').value = Number(entry.cost_amount || 0);
     $('editAccountingOpeningBalance').value = Number(entry.opening_balance || 0);
     $('editAccountingWeeklyAmount').value = Number(entry.weekly_amount || 0);
-    $('editAccountingDueWeekday').value = entry.installment_due_weekday == null ? '' : String(entry.installment_due_weekday);
     $('editAccountingScheduleType').value = entry.installment_schedule_type || 'weekly';
-    $('editAccountingDueDate').value = entry.installment_due_date || '';
-    $('editAccountingWeekdayField').hidden = $('editAccountingScheduleType').value !== 'weekly';
-    $('editAccountingStartDateField').hidden = $('editAccountingScheduleType').value === 'weekly';
-    $('editAccountingScheduleType').onchange = () => { const w=$('editAccountingScheduleType').value==='weekly'; $('editAccountingWeekdayField').hidden=!w; $('editAccountingStartDateField').hidden=w; };
+    $('editAccountingDueDate').value = entry.installment_due_date || nextScheduledDate(entry) || today();
+    const syncWeekdayFromDate = () => {
+      const selected = dateFromKey($('editAccountingDueDate').value);
+      if (selected) $('editAccountingDueWeekday').value = String(selected.getUTCDay());
+    };
+    syncWeekdayFromDate();
+    $('editAccountingDueDate').onchange = syncWeekdayFromDate;
+    $('editAccountingScheduleType').onchange = () => syncWeekdayFromDate();
     $('editAccountingNotes').value = entry.notes || '';
     $('accountingEntryEditMessage').textContent = '';
     $('accountingEntryEditDialog').showModal();
