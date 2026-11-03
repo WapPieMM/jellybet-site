@@ -872,4 +872,4 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
 }
 
 
-.admin-tabs .admin-accounting-link{display:flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
+.admin-accounting-shortcut{display:flex;align-items:center;gap:11px;margin-top:10px;padding:11px 14px;border:1px solid #ead9df;border-radius:14px;background:linear-gradient(110deg,#fff7fa,#fffdfb);color:#8c6274;text-decoration:none;transition:background .2s,border-color .2s}.admin-accounting-shortcut:hover{background:#fff0f5;border-color:#d9b5c4}.admin-accounting-shortcut>span:first-child{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:#f8e7ee;color:#a8758a;font-size:19px}.admin-accounting-shortcut strong,.admin-accounting-shortcut small{display:block}.admin-accounting-shortcut strong{font-size:12px;font-weight:600}.admin-accounting-shortcut small{margin-top:2px;color:#a38b95;font-size:10px}.admin-accounting-shortcut .shortcut-arrow{margin-left:auto;font-size:18px;color:#bd8da1}
