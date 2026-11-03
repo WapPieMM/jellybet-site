@@ -175,6 +175,8 @@
     renderDueToday();
     $('accountingInstallmentList').innerHTML = entries.length ? entries.slice().sort((a,b) => remaining(b)-remaining(a)).map(entry => {
       const due = remaining(entry);
+      // Expected profit if the customer completes the full installment amount.
+      const expectedProfit = Number(entry.sale_amount || 0) - Number(entry.cost_amount || 0);
       const schedule = scheduleDueState(entry);
       const overdue = due > 0.009 && schedule.overdue;
       const dueToday = due > 0.009 && schedule.dueToday;
@@ -185,6 +187,7 @@
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่อรอบ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
+        '<div class="accounting-expected-profit ' + (expectedProfit >= 0 ? 'is-positive' : 'is-negative') + '"><span>กำไรที่คาดว่าจะได้เมื่อผ่อนครบ</span><strong>' + (expectedProfit > 0 ? '+' : '') + money(expectedProfit) + '</strong><small>ยอดขายรวม − ต้นทุนไอดี · ยังไม่ใช่กำไรที่รับรู้แล้ว</small></div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
         '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">เลื่อนวันส่งยอด / แก้ไขข้อมูล</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
