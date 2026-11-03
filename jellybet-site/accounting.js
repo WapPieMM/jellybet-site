@@ -163,7 +163,7 @@
     $('accountingDueTodayPaid').textContent = 'ส่งยอดแล้ว ' + paid.length;
     $('accountingDueTodayList').innerHTML = dueEntries.length ? dueEntries.map(entry => {
       const isPaid = wasPaidForSchedule(entry, date);
-      return '<article class="accounting-due-today-row"><div class="accounting-due-today-name"><strong>' + escapeHtml(entry.account_title) + '</strong><small>ยอดที่ต้องส่ง ' + money(entry.weekly_amount) + ' · คงเหลือ ' + money(remaining(entry)) + '</small></div><span class="accounting-send-state ' + (isPaid ? 'is-sent' : 'is-pending') + '">' + (isPaid ? '✓ ส่งยอดแล้ว' : 'ยังไม่ส่งยอด') + '</span><button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">บันทึกรับเงิน</button></article>';
+      return '<article class="accounting-due-today-row"><div class="accounting-due-today-name"><strong>' + escapeHtml(entry.account_title) + '</strong><small>ยอดที่ต้องส่ง ' + (Number(entry.weekly_amount) > 0 ? money(entry.weekly_amount) : 'ยังไม่ได้กำหนด') + ' · คงเหลือ ' + money(remaining(entry)) + '</small></div><span class="accounting-send-state ' + (isPaid ? 'is-sent' : 'is-pending') + '">' + (isPaid ? '✓ ส่งยอดแล้ว' : 'ยังไม่ส่งยอด') + '</span>' + (isPaid ? '<span class="accounting-paid-note">รับเงินแล้ว</span>' : '<button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">บันทึกรับเงิน</button>') + '</article>';
     }).join('') : '<p class="accounting-empty">วันนี้ไม่มีรายการที่ต้องส่งยอด ♡</p>';
   }
 
