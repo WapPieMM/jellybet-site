@@ -2,12 +2,14 @@
   "name": "jellybet-site",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "vite jellybet-site --port 3000 --host 0.0.0.0",
-    "build": "vite build jellybet-site",
-    "preview": "vite preview jellybet-site --port 3000 --host 0.0.0.0"
+    "dev": "node server.js",
+    "build": "node --check server.js",
+    "start": "node server.js",
+    "lint": "node --check server.js"
   },
-  "devDependencies": {
-    "vite": "^5.4.0"
+  "dependencies": {
+    "express": "^4.21.2"
   }
 }

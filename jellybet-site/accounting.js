@@ -33,19 +33,38 @@
   function addDays(value,days){const d=dateFromKey(value);if(!d)return '';d.setUTCDate(d.getUTCDate()+days);return keyFromUtc(d);}
   function latestScheduledDate(entry,reference=today()){
     const type=entry.installment_schedule_type||'weekly';
-    if(type==='weekly'){if(entry.installment_due_weekday==null)return '';const d=dateFromKey(reference);d.setUTCDate(d.getUTCDate()-((d.getUTCDay()-Number(entry.installment_due_weekday)+7)%7));return keyFromUtc(d);}
-    const anchor=entry.installment_due_date;if(!anchor||anchor>reference)return '';
+    const anchor=entry.installment_due_date;
+    if(anchor&&anchor>reference)return '';
+    if(type==='weekly'){
+      if(entry.installment_due_weekday==null)return '';
+      const d=dateFromKey(reference);
+      d.setUTCDate(d.getUTCDate()-((d.getUTCDay()-Number(entry.installment_due_weekday)+7)%7));
+      const scheduled=keyFromUtc(d);
+      return anchor&&scheduled<anchor?'':scheduled;
+    }
+    if(!anchor)return '';
     const interval=type==='every_other_day'?2:1,elapsed=(dateFromKey(reference)-dateFromKey(anchor))/86400000;
     return addDays(anchor,Math.floor(elapsed/interval)*interval);
   }
   function nextScheduledDate(entry,afterDate=today()){
     const type=entry.installment_schedule_type||'weekly';
-    if(type==='weekly'){if(entry.installment_due_weekday==null)return '';const d=dateFromKey(afterDate);let delta=(Number(entry.installment_due_weekday)-d.getUTCDay()+7)%7;if(!delta)delta=7;d.setUTCDate(d.getUTCDate()+delta);return keyFromUtc(d);}
-    const anchor=entry.installment_due_date;if(!anchor)return '';const interval=type==='every_other_day'?2:1;if(anchor>afterDate)return anchor;
-    const elapsed=(dateFromKey(afterDate)-dateFromKey(anchor))/86400000;return addDays(anchor,(Math.floor(elapsed/interval)+1)*interval);
+    const anchor=entry.installment_due_date;
+    if(anchor&&anchor>afterDate)return anchor;
+    if(type==='weekly'){
+      if(entry.installment_due_weekday==null)return '';
+      const d=dateFromKey(afterDate);
+      let delta=(Number(entry.installment_due_weekday)-d.getUTCDay()+7)%7;
+      if(!delta)delta=7;
+      d.setUTCDate(d.getUTCDate()+delta);
+      return keyFromUtc(d);
+    }
+    if(!anchor)return '';
+    const interval=type==='every_other_day'?2:1;
+    const elapsed=(dateFromKey(afterDate)-dateFromKey(anchor))/86400000;
+    return addDays(anchor,(Math.floor(elapsed/interval)+1)*interval);
   }
   function scheduleLabel(entry){const type=entry.installment_schedule_type||'weekly';if(type==='daily')return 'ส่งยอดทุกวัน · เริ่ม '+formatDate(entry.installment_due_date);if(type==='every_other_day')return 'ส่งยอดวันเว้นวัน · เริ่ม '+formatDate(entry.installment_due_date);return entry.installment_due_weekday==null?'':'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday);}
-  function scheduleDueState(entry){const scheduled=latestScheduledDate(entry);if(!scheduled)return {label:scheduleLabel(entry),dueToday:false,overdue:false,nextDate:nextScheduledDate(entry)};const paid=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled);return {label:scheduleLabel(entry),dueToday:!paid&&scheduled===today(),overdue:!paid&&scheduled<today(),nextDate:paid?nextScheduledDate(entry):scheduled};
+  function scheduleDueState(entry){const scheduled=latestScheduledDate(entry);if(!scheduled)return {label:scheduleLabel(entry),dueToday:false,overdue:false,nextDate:nextScheduledDate(entry)};const paid=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled&&(!entry.installment_due_date||payment.payment_type!=='deposit'));return {label:scheduleLabel(entry),dueToday:!paid&&scheduled===today(),overdue:!paid&&scheduled<today(),nextDate:paid?nextScheduledDate(entry):scheduled};
   }
   const bangkokDate = value => {
     if (!value) return '';
@@ -138,17 +157,18 @@
 
   function isScheduledOn(entry, date) {
     const type = entry.installment_schedule_type || 'weekly';
+    const anchor = entry.installment_due_date;
+    if (anchor && date < anchor) return false;
     if (type === 'weekly') {
       return entry.installment_due_weekday != null && dateFromKey(date).getUTCDay() === Number(entry.installment_due_weekday);
     }
-    const anchor = entry.installment_due_date;
-    if (!anchor || date < anchor) return false;
+    if (!anchor) return false;
     const elapsed = (dateFromKey(date) - dateFromKey(anchor)) / 86400000;
     return elapsed % (type === 'every_other_day' ? 2 : 1) === 0;
   }
 
   function wasPaidForSchedule(entry, date) {
-    return paymentsFor(entry.id).some(payment => payment.paid_on >= date && payment.paid_on <= today());
+    return paymentsFor(entry.id).some(payment => payment.paid_on >= date && payment.paid_on <= today() && (!entry.installment_due_date || payment.payment_type !== 'deposit'));
   }
 
   function renderDueToday() {
@@ -372,12 +392,14 @@
     $('editAccountingOpeningBalance').value = Number(entry.opening_balance || 0);
     $('editAccountingWeeklyAmount').value = Number(entry.weekly_amount || 0);
     $('editAccountingScheduleType').value = entry.installment_schedule_type || 'weekly';
-    $('editAccountingDueDate').value = entry.installment_due_date || nextScheduledDate(entry) || today();
+    const currentSchedule = scheduleDueState(entry);
+    $('editAccountingDueDate').value = currentSchedule.nextDate || entry.installment_due_date || nextScheduledDate(entry) || today();
     const syncWeekdayFromDate = () => {
       const selected = dateFromKey($('editAccountingDueDate').value);
       if (selected) $('editAccountingDueWeekday').value = String(selected.getUTCDay());
     };
     syncWeekdayFromDate();
+    $('editAccountingDueDate').oninput = syncWeekdayFromDate;
     $('editAccountingDueDate').onchange = syncWeekdayFromDate;
     $('editAccountingScheduleType').onchange = () => syncWeekdayFromDate();
     $('editAccountingNotes').value = entry.notes || '';
@@ -403,40 +425,46 @@
       return;
     }
     const scheduleType = $('editAccountingScheduleType').value;
-    if (scheduleType === 'weekly' && !$('editAccountingDueWeekday').value) { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันส่งยอดประจำสัปดาห์'; return; }
-    if (scheduleType !== 'weekly' && !$('editAccountingDueDate').value) { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันที่เริ่มต้นรอบผ่อน'; return; }
+    const dueDateValue = $('editAccountingDueDate').value;
+    const parsedDueDate = dateFromKey(dueDateValue);
+    if (parsedDueDate) {
+      $('editAccountingDueWeekday').value = String(parsedDueDate.getUTCDay());
+    }
+    if (!dueDateValue) { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันที่ต้องการเลื่อน / วันที่เริ่มรอบ'; return; }
+    if (scheduleType === 'weekly' && $('editAccountingDueWeekday').value === '') { $('accountingEntryEditMessage').textContent = 'กรุณาเลือกวันส่งยอดประจำสัปดาห์'; return; }
     if (totalPaid(id) > openingBalance + 0.001) {
       $('accountingEntryEditMessage').textContent = 'ยอดตั้งต้นต้องไม่น้อยกว่าเงินที่รับไปแล้ว (' + money(totalPaid(id)) + ')';
       return;
     }
+    const dueWeekday = scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null;
     const button = event.currentTarget.querySelector('button[type="submit"]');
     button.disabled = true;
     try {
+      if (entry.source_account_id) {
+        const {error: financialError} = await db.from('account_private_financials').update({
+          installment_due_weekday: dueWeekday,
+          installment_schedule_type: scheduleType,
+          installment_due_date: dueDateValue,
+          updated_at: new Date().toISOString()
+        }).eq('account_id', entry.source_account_id);
+        if (financialError) throw new Error('ซิงก์รูปแบบการผ่อนไปยัง Account ไม่สำเร็จ: ' + financialError.message);
+      }
       const {error} = await db.from('accounting_entries').update({
         sale_date: $('editAccountingSaleDate').value,
         sale_amount: saleAmount,
         cost_amount: costAmount,
         opening_balance: openingBalance,
         weekly_amount: weeklyAmount,
-        installment_due_weekday: scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null,
+        installment_due_weekday: dueWeekday,
         installment_schedule_type: scheduleType,
-        installment_due_date: scheduleType === 'weekly' ? null : $('editAccountingDueDate').value,
+        installment_due_date: dueDateValue,
         notes: $('editAccountingNotes').value.trim(),
         updated_at: new Date().toISOString()
       }).eq('id', id);
       if (error) throw error;
-      if (entry.source_account_id) {
-        const {error: financialError} = await db.from('account_private_financials').update({
-          installment_due_weekday: scheduleType === 'weekly' ? Number($('editAccountingDueWeekday').value) : null,
-          installment_schedule_type: scheduleType,
-          installment_due_date: scheduleType === 'weekly' ? null : $('editAccountingDueDate').value,
-          updated_at: new Date().toISOString()
-        }).eq('account_id', entry.source_account_id);
-        if (financialError) throw new Error('บันทึก Accounting แล้ว แต่ซิงก์รูปแบบการผ่อนกลับไปยัง Account ไม่สำเร็จ: ' + financialError.message);
-      }
       $('accountingEntryEditDialog').close();
       await loadData();
-      setMessage('แก้ไขข้อมูลบัญชีเรียบร้อยแล้ว และคำนวณยอดค้างใหม่ ♡');
+      setMessage('แก้ไขข้อมูลบัญชีเรียบร้อยแล้ว และอัปเดตกำหนดชำระครั้งถัดไปใหม่ ♡');
     } catch (error) {
       $('accountingEntryEditMessage').textContent = 'แก้ไขไม่สำเร็จ: ' + error.message;
     } finally {

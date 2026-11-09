@@ -26,14 +26,16 @@ function bangkokToday(): string {
 }
 
 function scheduledDateForToday(today: string, scheduleType: string, weekday: number | null, anchor: string | null): string {
+  if (anchor && anchor > today) return '';
   const date = new Date(`${today}T00:00:00Z`);
   if (scheduleType === 'weekly') {
     if (weekday === null) return '';
     const daysBack = (date.getUTCDay() - weekday + 7) % 7;
     date.setUTCDate(date.getUTCDate() - daysBack);
-    return date.toISOString().slice(0, 10);
+    const scheduled = date.toISOString().slice(0, 10);
+    return anchor && scheduled < anchor ? '' : scheduled;
   }
-  if (!anchor || anchor > today) return '';
+  if (!anchor) return '';
   const interval = scheduleType === 'every_other_day' ? 2 : 1;
   const anchorDate = new Date(`${anchor}T00:00:00Z`);
   const elapsed = Math.floor((date.getTime() - anchorDate.getTime()) / 86400000);
