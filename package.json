@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bunx vite",
-    "build": "bunx vite build"
+    "dev": "vite jellybet-site --port 3000 --host 0.0.0.0",
+    "build": "vite build jellybet-site",
+    "preview": "vite preview jellybet-site --port 3000 --host 0.0.0.0"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "vite": "^5.4.0"
   }
 }
