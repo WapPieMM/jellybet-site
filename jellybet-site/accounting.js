@@ -10,6 +10,8 @@
   let entries = [];
   let payments = [];
   let activeTab = 'overview';
+  let installmentFilter = 'all';
+  let installmentSearch = '';
   const money = value => '฿' + Number(value || 0).toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 2});
   const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const today = () => {
@@ -36,11 +38,11 @@
     const anchor=entry.installment_due_date;
     if(anchor&&anchor>reference)return '';
     if(type==='weekly'){
-      if(entry.installment_due_weekday==null)return '';
+      if(entry.installment_due_weekday==null)return anchor||'';
       const d=dateFromKey(reference);
       d.setUTCDate(d.getUTCDate()-((d.getUTCDay()-Number(entry.installment_due_weekday)+7)%7));
       const scheduled=keyFromUtc(d);
-      return anchor&&scheduled<anchor?'':scheduled;
+      return anchor&&scheduled<anchor?anchor:scheduled;
     }
     if(!anchor)return '';
     const interval=type==='every_other_day'?2:1,elapsed=(dateFromKey(reference)-dateFromKey(anchor))/86400000;
@@ -63,7 +65,19 @@
     const elapsed=(dateFromKey(afterDate)-dateFromKey(anchor))/86400000;
     return addDays(anchor,(Math.floor(elapsed/interval)+1)*interval);
   }
-  function scheduleLabel(entry){const type=entry.installment_schedule_type||'weekly';if(type==='daily')return 'ส่งยอดทุกวัน · เริ่ม '+formatDate(entry.installment_due_date);if(type==='every_other_day')return 'ส่งยอดวันเว้นวัน · เริ่ม '+formatDate(entry.installment_due_date);return entry.installment_due_weekday==null?'':'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday);}
+  function scheduleLabel(entry){
+    const type=entry.installment_schedule_type||'weekly';
+    if(type==='daily')return 'ส่งยอดทุกวัน · เริ่ม '+formatDate(entry.installment_due_date);
+    if(type==='every_other_day')return 'ส่งยอดวันเว้นวัน · เริ่ม '+formatDate(entry.installment_due_date);
+    const base=entry.installment_due_weekday==null?'':'ส่งยอดทุก'+weekdayLabel(entry.installment_due_weekday);
+    if(entry.installment_due_date){
+      const anchorDay=dateFromKey(entry.installment_due_date)?.getUTCDay();
+      if(entry.installment_due_weekday!=null&&anchorDay!=null&&anchorDay!==Number(entry.installment_due_weekday)&&entry.installment_due_date>=today()){
+        return base+' (เลื่อนนัดเป็น '+formatDate(entry.installment_due_date)+')';
+      }
+    }
+    return base;
+  }
   function scheduleDueState(entry){const scheduled=latestScheduledDate(entry);if(!scheduled)return {label:scheduleLabel(entry),dueToday:false,overdue:false,nextDate:nextScheduledDate(entry)};const paid=paymentsFor(entry.id).some(payment=>payment.paid_on>=scheduled&&(!entry.installment_due_date||payment.payment_type!=='deposit'));return {label:scheduleLabel(entry),dueToday:!paid&&scheduled===today(),overdue:!paid&&scheduled<today(),nextDate:paid?nextScheduledDate(entry):scheduled};
   }
   const bangkokDate = value => {
@@ -131,17 +145,21 @@
     }, 0);
     const received = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const profit = sales - costs;
+    const netCashThisMonth = received - costs;
     const openEntries = entries.filter(entry => remaining(entry) > 0.009);
     const outstanding = openEntries.reduce((sum, entry) => sum + remaining(entry), 0);
     const monthDate = new Date(Number(month.slice(0,4)), Number(month.slice(5,7))-1, 1);
     $('accountingMonthLabel').textContent = monthDate.toLocaleDateString('th-TH', {month:'long',year:'numeric'});
     $('statSales').textContent = money(sales);
-    $('statSalesCount').textContent = monthEntries.length + ' รายการขายใหม่';
+    $('statSalesCount').textContent = monthEntries.length + ' รายการที่เริ่มขายเดือนนี้';
     $('statReceived').textContent = money(received);
-    $('statProfit').textContent = money(profit);
+    if ($('statReceivedDetail')) {
+      $('statReceivedDetail').textContent = monthPayments.length + ' รายการรับโอน · หักทุนเดือนนี้เหลือ ' + (netCashThisMonth >= 0 ? '+' : '') + money(netCashThisMonth);
+    }
+    $('statProfit').textContent = (profit > 0 ? '+' : '') + money(profit);
     $('statCost').textContent = 'ต้นทุนไอดีที่ขายเดือนนี้ ' + money(costs);
     $('statOutstanding').textContent = money(outstanding);
-    $('statOpenCount').textContent = openEntries.length + ' ไอดีที่ยังมียอดค้าง';
+    $('statOpenCount').textContent = openEntries.length + ' ไอดีที่ยังผ่อนไม่ครบ';
 
     const recent = monthPayments.slice().sort((a,b) => b.paid_on.localeCompare(a.paid_on) || String(b.created_at).localeCompare(String(a.created_at))).slice(0,6);
     $('overviewRecentPayments').innerHTML = recent.length ? recent.map(payment => {
@@ -150,15 +168,17 @@
     }).join('') : '<p class="accounting-empty">ยังไม่มีรายการรับเงินในเดือนนี้</p>';
 
     const outstandingList = openEntries.slice().sort((a,b) => remaining(b)-remaining(a)).slice(0,6);
-    $('overviewOutstanding').innerHTML = outstandingList.length ? outstandingList.map(entry => (
-      '<div class="accounting-activity-row"><div><strong>' + escapeHtml(entry.account_title) + '</strong><small>' + (entry.is_carryover ? 'ยอดยกมาตั้งต้น' : 'ขาย ' + formatDate(entry.sale_date)) + (scheduleLabel(entry) ? ' · '+escapeHtml(scheduleLabel(entry)) : '') + '</small></div><b>' + money(remaining(entry)) + '</b></div>'
-    )).join('') : '<p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p>';
+    $('overviewOutstanding').innerHTML = outstandingList.length ? outstandingList.map(entry => {
+      const schedule = scheduleDueState(entry);
+      return '<div class="accounting-activity-row"><div><strong>' + escapeHtml(entry.account_title) + '</strong><small>' + (entry.is_carryover ? 'ยอดยกมาตั้งต้น' : 'ขาย ' + formatDate(entry.sale_date)) + (schedule.label ? ' · '+escapeHtml(schedule.label) : '') + (schedule.nextDate ? ' · นัดถัดไป ' + formatDate(schedule.nextDate) : '') + '</small></div><div class="accounting-activity-actions"><button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">＋ รับเงิน</button><button type="button" class="accounting-text-button" data-postpone-entry="' + entry.id + '">เลื่อนวัน</button><b>' + money(remaining(entry)) + '</b></div></div>';
+    }).join('') : '<p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p>';
   }
 
   function isScheduledOn(entry, date) {
     const type = entry.installment_schedule_type || 'weekly';
     const anchor = entry.installment_due_date;
     if (anchor && date < anchor) return false;
+    if (anchor && date === anchor) return true;
     if (type === 'weekly') {
       return entry.installment_due_weekday != null && dateFromKey(date).getUTCDay() === Number(entry.installment_due_weekday);
     }
@@ -183,7 +203,7 @@
     $('accountingDueTodayPaid').textContent = 'ส่งยอดแล้ว ' + paid.length;
     $('accountingDueTodayList').innerHTML = dueEntries.length ? dueEntries.map(entry => {
       const isPaid = wasPaidForSchedule(entry, date);
-      return '<article class="accounting-due-today-row"><div class="accounting-due-today-name"><strong>' + escapeHtml(entry.account_title) + '</strong><small>ยอดที่ต้องส่ง ' + (Number(entry.weekly_amount) > 0 ? money(entry.weekly_amount) : 'ยังไม่ได้กำหนด') + ' · คงเหลือ ' + money(remaining(entry)) + '</small></div><span class="accounting-send-state ' + (isPaid ? 'is-sent' : 'is-pending') + '">' + (isPaid ? '✓ ส่งยอดแล้ว' : 'ยังไม่ส่งยอด') + '</span>' + (isPaid ? '<span class="accounting-paid-note">รับเงินแล้ว</span>' : '<button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">บันทึกรับเงิน</button>') + '</article>';
+      return '<article class="accounting-due-today-row"><div class="accounting-due-today-name"><strong>' + escapeHtml(entry.account_title) + '</strong><small>ยอดต่องวด ' + (Number(entry.weekly_amount) > 0 ? money(entry.weekly_amount) : 'ยังไม่ได้กำหนด') + ' · คงเหลือ ' + money(remaining(entry)) + '</small></div><span class="accounting-send-state ' + (isPaid ? 'is-sent' : 'is-pending') + '">' + (isPaid ? '✓ ส่งยอดแล้ว' : 'ยังไม่ส่งยอด') + '</span>' + (isPaid ? '<span class="accounting-paid-note">รับเงินแล้ว</span>' : '<div class="accounting-due-today-actions"><button type="button" class="accounting-due-action" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button><button type="button" class="accounting-text-button" data-postpone-entry="' + entry.id + '">เลื่อนวัน</button></div>') + '</article>';
     }).join('') : '<p class="accounting-empty">วันนี้ไม่มีรายการที่ต้องส่งยอด ♡</p>';
   }
 
@@ -193,10 +213,27 @@
     $('installmentOpenTotal').textContent = 'ยอดค้าง ' + money(total);
     $('installmentActiveCount').textContent = 'กำลังติดผ่อน ' + open.length + ' รายการ';
     renderDueToday();
-    $('accountingInstallmentList').innerHTML = entries.length ? entries.slice().sort((a,b) => remaining(b)-remaining(a)).map(entry => {
+    const query = installmentSearch.trim().toLocaleLowerCase();
+    const filtered = entries.slice().sort((a,b) => remaining(b)-remaining(a)).filter(entry => {
+      if (query && !String(entry.account_title || '').toLocaleLowerCase().includes(query) && !String(entry.notes || '').toLocaleLowerCase().includes(query)) {
+        return false;
+      }
       const due = remaining(entry);
-      // Expected profit if the customer completes the full installment amount.
-      const expectedProfit = Number(entry.sale_amount || 0) - Number(entry.cost_amount || 0);
+      const schedule = scheduleDueState(entry);
+      if (installmentFilter === 'attention') return due > 0.009 && (schedule.overdue || schedule.dueToday);
+      if (installmentFilter === 'open') return due > 0.009;
+      if (installmentFilter === 'paid') return due <= 0.009;
+      return true;
+    });
+    $('accountingInstallmentList').innerHTML = filtered.length ? filtered.map(entry => {
+      const due = remaining(entry);
+      const paidSoFar = totalPaid(entry.id);
+      const costAmount = Number(entry.cost_amount || 0);
+      const expectedProfit = Number(entry.sale_amount || 0) - costAmount;
+      const realizedCashNet = paidSoFar - costAmount;
+      const cashStatusText = realizedCashNet >= 0
+        ? 'คืนทุนแล้ว · เงินสดรับจริงเกินทุนอยู่ +' + money(realizedCashNet)
+        : 'รับเงินจริงแล้ว ' + money(paidSoFar) + ' · ขาดอีก ' + money(Math.abs(realizedCashNet)) + ' จะคืนทุน';
       const schedule = scheduleDueState(entry);
       const overdue = due > 0.009 && schedule.overdue;
       const dueToday = due > 0.009 && schedule.dueToday;
@@ -206,14 +243,14 @@
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
-        '<div class="accounting-entry-numbers"><span>ยอดที่ต้องชำระทั้งหมด <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(totalPaid(entry.id)) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่อรอบ <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
-        '<div class="accounting-expected-profit ' + (expectedProfit >= 0 ? 'is-positive' : 'is-negative') + '"><span>กำไรที่คาดว่าจะได้เมื่อผ่อนครบ</span><strong>' + (expectedProfit > 0 ? '+' : '') + money(expectedProfit) + '</strong><small>ยอดขายรวม − ต้นทุนไอดี · ยังไม่ใช่กำไรที่รับรู้แล้ว</small></div>' +
-        '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
-        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">เลื่อนวันส่งยอด / แก้ไขข้อมูล</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
+        '<div class="accounting-entry-numbers"><span>ยอดขายรวม <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(paidSoFar) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่องวด <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
+        '<div class="accounting-expected-profit ' + (expectedProfit >= 0 ? 'is-positive' : 'is-negative') + '"><span>กำไรเมื่อลูกค้าผ่อนครบ</span><strong>' + (expectedProfit > 0 ? '+' : '') + money(expectedProfit) + '</strong><small>' + escapeHtml(cashStatusText) + '</small></div>' +
+        '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button><button type="button" class="secondary-button accounting-postpone-btn" data-postpone-entry="' + entry.id + '">เลื่อนวันส่งยอด</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
+        '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
         '<div class="accounting-inline-history" id="history-' + entry.id + '" hidden>' + (history.length ? history.map(payment => '<div><span>' + formatDate(payment.paid_on) + ' · ' + typeLabel(payment.payment_type) + (payment.note ? ' · ' + escapeHtml(payment.note) : '') + '</span><b>' + money(payment.amount) + '</b><button type="button" class="accounting-text-button" data-edit-payment="' + payment.id + '">แก้ไข</button></div>').join('') : '<p>ยังไม่มีประวัติรับเงิน</p>') + '</div>' +
       '</article>';
-    }).join('') : '<div class="accounting-empty card">ยังไม่มีรายการบัญชี กรุณาตรวจสอบรายการจากแท็บ “นำเข้าจาก Account”</div>';
+    }).join('') : '<div class="accounting-empty card">' + (entries.length ? 'ไม่พบรายการที่ตรงกับตัวกรองหรือคำค้นหา' : 'ยังไม่มีรายการบัญชี เมื่อเปลี่ยนสถานะ Account เป็นติดผ่อนหรือขายแล้ว รายการจะเข้าสู่หน้านี้โดยอัตโนมัติค่ะ') + '</div>';
   }
 
   function renderTransactions() {
@@ -255,7 +292,7 @@
       '<label>ต้นทุนไอดี (บาท)<input type="number" min="0" step="0.01" data-import-cost value="' + Number(account.acquisition_cost || 0) + '" required></label>' +
       (carryover ? '<label>ยอดค้างตั้งต้น (บาท)<input type="number" min="0" step="0.01" data-import-opening placeholder="กรอกยอดคงเหลือจริง" required></label>' :
         '<label>เงินที่รับแล้ว ณ วันเริ่มขาย (บาท)<input type="number" min="0" step="0.01" data-import-received value="' + receivedDefault + '" required></label>') +
-      '<label>ยอดชำระต่อรอบ (บาท)<input type="number" min="0" step="0.01" data-import-weekly value="' + Number(firstPlan.weekly || 0) + '"></label></div>' +
+      '<label>ยอดชำระต่องวด (บาท)<input type="number" min="0" step="0.01" data-import-weekly value="' + Number(firstPlan.weekly || 0) + '"></label></div>' +
       '<label class="accounting-import-note-label">หมายเหตุ (ไม่บังคับ)<input type="text" maxlength="250" data-import-note placeholder="ข้อมูลเพิ่มเติม"></label>' +
       '<button type="button" class="primary-button" data-import-entry>นำเข้าบัญชีรายการนี้</button></article>';
   }
@@ -265,6 +302,8 @@
     const count = pending.carryovers.length + pending.newSales.length;
     $('accountingImportCount').textContent = count;
     $('accountingPendingChip').textContent = count + ' รายการ';
+    if ($('accountingImportEmptyBanner')) $('accountingImportEmptyBanner').hidden = count > 0;
+    if ($('accountingImportSections')) $('accountingImportSections').hidden = count === 0;
     $('accountingCarryoverCandidates').innerHTML = pending.carryovers.length ? pending.carryovers.map(account => importCard(account, true)).join('') : '<p class="accounting-empty">ไม่มีไอดีติดผ่อนเดิมที่รอนำเข้า</p>';
     $('accountingNewCandidates').innerHTML = pending.newSales.length ? pending.newSales.map(account => importCard(account, false)).join('') : '<p class="accounting-empty">ยังไม่มีรายการขายใหม่ที่รอนำเข้า</p>';
   }
@@ -380,6 +419,122 @@
     await loadData();
     setMessage('นำเข้า ' + payload.account_title + ' เข้าระบบบัญชีแล้ว ♡');
   }
+
+  function updatePostponeHint() {
+    const entry = entryById($('postponeEntryId').value);
+    const scheduleType = $('postponeScheduleType').value;
+    const dueDateValue = $('postponeDueDate').value;
+    const modeWrap = $('postponeWeeklyModeWrap');
+    const hint = $('postponeWeeklyHint');
+    if (modeWrap) modeWrap.hidden = scheduleType !== 'weekly';
+    if (!hint || scheduleType !== 'weekly') return;
+    const parsed = dateFromKey(dueDateValue);
+    const newWeekdayName = parsed ? WEEKDAY_NAMES[parsed.getUTCDay()] : '';
+    const oldWeekdayName = entry && entry.installment_due_weekday != null ? weekdayLabel(entry.installment_due_weekday) : newWeekdayName;
+    if ($('postponeWeeklyMode').value === 'keep_weekday' && oldWeekdayName) {
+      hint.textContent = 'งวดที่จะถึงนี้จะนัดจ่ายวันที่ ' + formatDate(dueDateValue) + ' และงวดถัดไปจะกลับไปส่งทุก' + oldWeekdayName + 'ตามเดิม';
+    } else if (newWeekdayName) {
+      hint.textContent = 'กำหนดชำระครั้งถัดไปคือวันที่ ' + formatDate(dueDateValue) + ' และเปลี่ยนวันส่งยอดประจำสัปดาห์เป็นทุก' + newWeekdayName;
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  function openPostponeDialog(entryId) {
+    const entry = entryById(entryId);
+    if (!entry) return;
+    const currentSchedule = scheduleDueState(entry);
+    const baseDate = currentSchedule.nextDate || entry.installment_due_date || nextScheduledDate(entry) || today();
+    $('postponeEntryId').value = entry.id;
+    $('accountingPostponeTitle').textContent = entry.account_title;
+    $('accountingPostponeCurrentInfo').innerHTML =
+      '<span>กำหนดชำระเดิม: <b>' + formatDate(baseDate) + '</b></span>' +
+      (currentSchedule.label ? '<span> · ' + escapeHtml(currentSchedule.label) + '</span>' : '');
+    $('postponeDueDate').value = baseDate;
+    $('postponeDueDate').dataset.baseDate = baseDate;
+    $('postponeScheduleType').value = entry.installment_schedule_type || 'weekly';
+    $('postponeWeeklyMode').value = 'change_weekday';
+    $('postponeNote').value = '';
+    $('accountingPostponeMessage').textContent = '';
+    updatePostponeHint();
+    $('accountingPostponeDialog').showModal();
+  }
+
+  $('postponeDueDate')?.addEventListener('input', updatePostponeHint);
+  $('postponeDueDate')?.addEventListener('change', updatePostponeHint);
+  $('postponeScheduleType')?.addEventListener('change', updatePostponeHint);
+  $('postponeWeeklyMode')?.addEventListener('change', updatePostponeHint);
+
+  document.querySelectorAll('[data-postpone-offset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const offset = Number(btn.dataset.postponeOffset || 0);
+      const base = $('postponeDueDate').value || $('postponeDueDate').dataset.baseDate || today();
+      const targetBase = base < today() ? today() : base;
+      const nextDate = addDays(targetBase, offset);
+      if (nextDate) {
+        $('postponeDueDate').value = nextDate;
+        updatePostponeHint();
+      }
+    });
+  });
+
+  $('accountingPostponeForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const id = $('postponeEntryId').value;
+    const entry = entryById(id);
+    if (!entry) {
+      $('accountingPostponeMessage').textContent = 'ไม่พบรายการบัญชี กรุณาโหลดหน้าใหม่';
+      return;
+    }
+    const dueDateValue = $('postponeDueDate').value;
+    const scheduleType = $('postponeScheduleType').value;
+    const weeklyMode = $('postponeWeeklyMode').value;
+    const parsedDate = dateFromKey(dueDateValue);
+    if (!dueDateValue || !parsedDate) {
+      $('accountingPostponeMessage').textContent = 'กรุณาเลือกวันที่นัดชำระครั้งถัดไป';
+      return;
+    }
+    const dueWeekday = scheduleType === 'weekly'
+      ? (weeklyMode === 'keep_weekday' && entry.installment_due_weekday != null
+          ? Number(entry.installment_due_weekday)
+          : parsedDate.getUTCDay())
+      : null;
+    const extraNote = $('postponeNote').value.trim();
+    const updatedNotes = extraNote
+      ? [entry.notes, 'เลื่อนนัดเป็น ' + formatDate(dueDateValue) + ': ' + extraNote].filter(Boolean).join(' | ')
+      : entry.notes || '';
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      if (entry.source_account_id) {
+        const {error: financialError} = await db.from('account_private_financials').update({
+          installment_due_weekday: dueWeekday,
+          installment_schedule_type: scheduleType,
+          installment_due_date: dueDateValue,
+          updated_at: new Date().toISOString()
+        }).eq('account_id', entry.source_account_id);
+        if (financialError) throw new Error('ซิงก์วันส่งยอดไปยัง Account ไม่สำเร็จ: ' + financialError.message);
+      }
+      const {error} = await db.from('accounting_entries').update({
+        installment_due_weekday: dueWeekday,
+        installment_schedule_type: scheduleType,
+        installment_due_date: dueDateValue,
+        notes: updatedNotes,
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+      if (error) throw error;
+      $('accountingPostponeDialog').close();
+      await loadData();
+      setMessage('เลื่อนวันส่งยอดของ ' + entry.account_title + ' เป็นวันที่ ' + formatDate(dueDateValue) + ' เรียบร้อยแล้ว ♡');
+    } catch (error) {
+      $('accountingPostponeMessage').textContent = 'บันทึกไม่สำเร็จ: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('closeAccountingPostpone')?.addEventListener('click', () => $('accountingPostponeDialog').close());
+  $('cancelAccountingPostpone')?.addEventListener('click', () => $('accountingPostponeDialog').close());
 
   function openEntryEditDialog(entryId) {
     const entry = entryById(entryId);
@@ -528,21 +683,45 @@
   $('accountingPaymentEditDialog').querySelector('#closeAccountingPaymentEdit').addEventListener('click', () => $('accountingPaymentEditDialog').close());
   $('accountingPaymentEditDialog').querySelector('#cancelAccountingPaymentEdit').addEventListener('click', () => $('accountingPaymentEditDialog').close());
 
+  function updatePaymentBalancePreview() {
+    const entry = entryById($('paymentEntryId').value);
+    const preview = $('paymentBalancePreview');
+    if (!entry || !preview) return;
+    const due = remaining(entry);
+    const amount = Math.max(0, Number($('paymentAmount').value) || 0);
+    const left = Math.max(0, due - amount);
+    preview.innerHTML = '<span>ยอดคงเหลือปัจจุบัน <b>' + money(due) + '</b></span><span> → หลังรับเงินครั้งนี้จะเหลือ <b>' + (left <= 0.009 ? '฿0 (ปิดยอดครบ ♡)' : money(left)) + '</b></span>';
+  }
+
   function openPaymentDialog(entryId) {
     const entry = entryById(entryId);
     if (!entry) return;
     const due = remaining(entry);
     if (due <= 0.009) return;
+    const weekly = Number(entry.weekly_amount || 0);
+    const defaultAmount = weekly > 0 ? Math.min(weekly, due) : due;
     $('paymentEntryId').value = entryId;
     $('accountingPaymentAccount').textContent = entry.account_title + ' · คงเหลือ ' + money(due);
-    $('paymentAmount').value = '';
+    $('paymentAmount').value = defaultAmount > 0 ? Number(defaultAmount.toFixed(2)) : '';
     $('paymentAmount').max = due.toFixed(2);
     $('paymentDate').value = today();
     $('paymentType').value = 'installment';
     $('paymentNote').value = '';
     $('accountingPaymentMessage').textContent = '';
+    const quickWrap = $('paymentQuickAmounts');
+    if (quickWrap) {
+      const buttons = [];
+      if (weekly > 0 && weekly < due - 0.009) {
+        buttons.push('<button type="button" class="accounting-chip-btn" data-fill-amount="' + Number(weekly.toFixed(2)) + '">ยอดต่องวด (' + money(weekly) + ')</button>');
+      }
+      buttons.push('<button type="button" class="accounting-chip-btn" data-fill-amount="' + Number(due.toFixed(2)) + '">ปิดยอดคงเหลือทั้งหมด (' + money(due) + ')</button>');
+      quickWrap.innerHTML = '<span>เลือกยอดด่วน:</span>' + buttons.join('');
+    }
+    updatePaymentBalancePreview();
     $('accountingPaymentDialog').showModal();
   }
+
+  $('paymentAmount')?.addEventListener('input', updatePaymentBalancePreview);
 
   $('accountingLoginForm').addEventListener('submit', async event => {
     event.preventDefault();
@@ -573,6 +752,42 @@
     $('accountingApp').hidden = true;
     $('accountingLogin').hidden = false;
     $('accountingPassword').value = '';
+  });
+
+  function setGuideVisible(visible) {
+    const guide = $('accountingQuickGuide');
+    const toggle = $('accountingGuideToggle');
+    if (!guide || !toggle) return;
+    guide.hidden = !visible;
+    toggle.setAttribute('aria-expanded', String(visible));
+    toggle.textContent = visible ? 'ซ่อนคู่มือ ▴' : 'คู่มือการใช้งาน ▾';
+    try { localStorage.setItem('jellybet_accounting_guide_hidden', visible ? '0' : '1'); } catch {}
+  }
+
+  try {
+    const hiddenPref = localStorage.getItem('jellybet_accounting_guide_hidden') === '1';
+    setGuideVisible(!hiddenPref);
+  } catch {}
+
+  $('accountingGuideToggle')?.addEventListener('click', () => {
+    const guide = $('accountingQuickGuide');
+    if (guide) setGuideVisible(guide.hidden);
+  });
+  $('accountingGuideDismiss')?.addEventListener('click', () => setGuideVisible(false));
+
+  $('installmentSearchInput')?.addEventListener('input', event => {
+    installmentSearch = event.currentTarget.value || '';
+    renderInstallments();
+  });
+
+  document.querySelectorAll('[data-installment-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      installmentFilter = button.dataset.installmentFilter || 'all';
+      document.querySelectorAll('[data-installment-filter]').forEach(btn => {
+        btn.classList.toggle('is-active', btn === button);
+      });
+      renderInstallments();
+    });
   });
 
   document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => showTab(button.dataset.accountingTab)));
@@ -612,6 +827,17 @@
   });
 
   document.addEventListener('click', async event => {
+    const fillAmountButton = event.target.closest('[data-fill-amount]');
+    if (fillAmountButton) {
+      $('paymentAmount').value = fillAmountButton.dataset.fillAmount;
+      updatePaymentBalancePreview();
+      return;
+    }
+    const postponeButton = event.target.closest('[data-postpone-entry]');
+    if (postponeButton) {
+      openPostponeDialog(postponeButton.dataset.postponeEntry);
+      return;
+    }
     const importButton = event.target.closest('[data-import-entry]');
     if (importButton) {
       const card = importButton.closest('[data-import-card]');

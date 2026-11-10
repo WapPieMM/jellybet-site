@@ -39,13 +39,49 @@
         <div>
           <p class="eyebrow">JELLYBET · PRIVATE BOOKS</p>
           <h1>บัญชีร้าน <span>♡</span></h1>
-          <p>สรุปยอดขาย เงินรับจริง และติดตามยอดผ่อนของ Account</p>
+          <p>สรุปยอดขาย เงินรับจริง และติดตามยอดผ่อนของ Account แบบเข้าใจง่าย</p>
         </div>
-        <button type="button" class="accounting-logout" id="accountingLogout">ออกจากระบบ</button>
+        <div class="accounting-title-actions">
+          <button type="button" class="accounting-guide-toggle" id="accountingGuideToggle" aria-expanded="true">คู่มือการใช้งาน ▾</button>
+          <button type="button" class="accounting-logout" id="accountingLogout">ออกจากระบบ</button>
+        </div>
       </div>
 
+      <section class="accounting-quick-guide card" id="accountingQuickGuide" aria-label="คู่มือการใช้งานระบบบัญชี">
+        <div class="accounting-quick-guide-head">
+          <div>
+            <strong>วิธีใช้งานหน้าบัญชีใน 3 ขั้นตอน</strong>
+            <small>ระบบเชื่อมต่อกับหน้าจัดการ Account อัตโนมัติ ไม่ต้องกรอกข้อมูลซ้ำ</small>
+          </div>
+          <button type="button" class="accounting-text-button" id="accountingGuideDismiss">ซ่อนคู่มือ</button>
+        </div>
+        <div class="accounting-quick-guide-steps">
+          <div class="accounting-guide-step">
+            <span class="accounting-guide-num">1</span>
+            <div>
+              <strong>ตอนเริ่มขาย / ติดผ่อน</strong>
+              <p>เปลี่ยนสถานะไอดีในหน้าหลักเป็น “ติดผ่อน” หรือ “ขายแล้ว” ระบบจะดึงเข้าหน้าบัญชีและบันทึกเงินดาวน์ให้อัตโนมัติทันที</p>
+            </div>
+          </div>
+          <div class="accounting-guide-step">
+            <span class="accounting-guide-num">2</span>
+            <div>
+              <strong>เมื่อลูกค้าโอนค่างวด</strong>
+              <p>ไปที่แท็บ “จัดการยอดผ่อน” แล้วกดปุ่ม <b>＋ บันทึกรับเงิน</b> ระบบจะเติมยอดค่างวดให้อัตโนมัติ กดยืนยันได้ทันที</p>
+            </div>
+          </div>
+          <div class="accounting-guide-step">
+            <span class="accounting-guide-num">3</span>
+            <div>
+              <strong>เมื่อลูกค้าขอเลื่อนวันส่งยอด</strong>
+              <p>กดปุ่ม <b>เลื่อนวันส่งยอด</b> บนการ์ดไอดีนั้น แล้วเลือกวันที่นัดใหม่ (เลือกได้ว่าจะเลื่อนเฉพาะงวดนี้ หรือเปลี่ยนวันประจำสัปดาห์ถาวร)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="accounting-toolbar card">
-        <div class="accounting-period-copy"><span>ACCOUNTING PERIOD</span><strong>เริ่มระบบ 1 พฤศจิกายน 2569</strong></div>
+        <div class="accounting-period-copy"><span>ACCOUNTING PERIOD</span><strong>เริ่มระบบ 1 พฤศจิกายน 2569 · ซิงก์ข้อมูลจาก Account อัตโนมัติ</strong></div>
         <label class="accounting-month-label">เดือนที่ต้องการดู<input id="accountingMonth" type="month" min="2026-11" value="2026-11"></label>
       </div>
 
@@ -53,7 +89,7 @@
         <button type="button" class="accounting-tab is-active" data-accounting-tab="overview">ภาพรวม</button>
         <button type="button" class="accounting-tab" data-accounting-tab="installments">จัดการยอดผ่อน</button>
         <button type="button" class="accounting-tab" data-accounting-tab="transactions">รายการรับเงิน</button>
-        <button type="button" class="accounting-tab" data-accounting-tab="import">นำเข้าจาก Account <span id="accountingImportCount">0</span></button>
+        <button type="button" class="accounting-tab" data-accounting-tab="import" id="accountingImportTabButton">นำเข้าไอดีเก่า <span id="accountingImportCount">0</span></button>
       </nav>
 
       <div class="accounting-message" id="accountingMessage" role="status" aria-live="polite"></div>
@@ -61,58 +97,121 @@
       <section class="accounting-panel" data-accounting-panel="overview">
         <div class="accounting-section-heading"><div><p class="eyebrow">MONTHLY SUMMARY</p><h2>ภาพรวมประจำเดือน</h2></div><span class="accounting-month-chip" id="accountingMonthLabel">พฤศจิกายน 2569</span></div>
         <div class="accounting-stat-grid">
-          <article class="accounting-stat-card"><span>ยอดขายในเดือน</span><strong id="statSales">฿0</strong><small id="statSalesCount">0 รายการ</small></article>
-          <article class="accounting-stat-card"><span>เงินรับจริงในเดือน</span><strong id="statReceived">฿0</strong><small>จากเงินมัดจำและค่างวด</small></article>
-          <article class="accounting-stat-card"><span>กำไรจากยอดขายในเดือน</span><strong id="statProfit">฿0</strong><small id="statCost">ต้นทุน ฿0</small></article>
-          <article class="accounting-stat-card"><span>ยอดผ่อนคงเหลือ</span><strong id="statOutstanding">฿0</strong><small id="statOpenCount">0 ไอดีที่ยังมียอดค้าง</small></article>
+          <article class="accounting-stat-card"><span>เงินสดรับจริงในเดือนนี้</span><strong id="statReceived">฿0</strong><small id="statReceivedDetail">รวมเงินดาวน์และค่างวดที่โอนเข้าจริง</small></article>
+          <article class="accounting-stat-card"><span>ยอดขายรวมที่เปิดในเดือนนี้</span><strong id="statSales">฿0</strong><small id="statSalesCount">0 รายการขายใหม่</small></article>
+          <article class="accounting-stat-card"><span>กำไรเมื่อลูกค้าผ่อนครบ</span><strong id="statProfit">฿0</strong><small id="statCost">ต้นทุน ฿0</small></article>
+          <article class="accounting-stat-card"><span>ยอดผ่อนคงเหลือรอเก็บ</span><strong id="statOutstanding">฿0</strong><small id="statOpenCount">0 ไอดีที่ยังมียอดค้าง</small></article>
         </div>
-        <div class="accounting-summary-note">ยอดขายและกำไรนับเฉพาะรายการขายใหม่ตั้งแต่ 1 พ.ย. 2569 เป็นต้นไป · เงินรับจริงนับตามวันที่รับเงิน · ไอดีติดผ่อนเดิมจะแสดงเป็นยอดยกมาและไม่นำยอดขายเก่ามารวม</div>
+        <div class="accounting-summary-note">
+          <strong>คำอธิบายตัวเลขแบบเข้าใจง่าย:</strong>
+          <span><b>เงินสดรับจริงในเดือนนี้</b> คือเงินที่ลูกค้าโอนเข้าบัญชีจริงตามวันที่รับเงิน · <b>กำไรเมื่อลูกค้าผ่อนครบ</b> คิดจาก (ยอดขายรวม − ต้นทุนไอดี) ของรายการที่เริ่มขายในเดือนนี้ · ส่วนเงินที่ลูกค้ายังผ่อนไม่ครบจะแสดงอยู่ใน <b>ยอดผ่อนคงเหลือรอเก็บ</b></span>
+        </div>
+        <div class="accounting-card card">
+          <div class="accounting-card-heading"><div><p class="eyebrow">FOLLOW UP</p><h3>ไอดีที่ยังมียอดค้างชำระ</h3></div><button type="button" class="accounting-text-button" data-open-tab="installments">ไปหน้าจัดการยอดผ่อน →</button></div>
+          <div id="overviewOutstanding" class="accounting-activity-list"><p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p></div>
+        </div>
         <div class="accounting-card card">
           <div class="accounting-card-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h3>รายการรับเงินล่าสุด</h3></div><button type="button" class="accounting-text-button" data-open-tab="transactions">ดูทั้งหมด →</button></div>
           <div id="overviewRecentPayments" class="accounting-activity-list"><p class="accounting-empty">ยังไม่มีรายการรับเงินในเดือนนี้</p></div>
-        </div>
-        <div class="accounting-card card">
-          <div class="accounting-card-heading"><div><p class="eyebrow">FOLLOW UP</p><h3>ไอดีที่ยังมียอดค้าง</h3></div><button type="button" class="accounting-text-button" data-open-tab="installments">จัดการยอดผ่อน →</button></div>
-          <div id="overviewOutstanding" class="accounting-activity-list"><p class="accounting-empty">ยังไม่มีรายการค้างชำระ</p></div>
         </div>
       </section>
 
       <section class="accounting-panel" data-accounting-panel="installments" hidden>
         <div class="accounting-section-heading"><div><p class="eyebrow">INSTALLMENT CONTROL</p><h2>จัดการยอดผ่อน</h2></div><div class="accounting-installment-summary"><span class="accounting-month-chip" id="installmentActiveCount">กำลังติดผ่อน 0 รายการ</span><span class="accounting-month-chip" id="installmentOpenTotal">ยอดค้าง ฿0</span></div></div>
-        <p class="accounting-description">ติดตามวันส่งยอด สถานะการชำระ และยอดคงเหลือของแต่ละ Account พร้อมเลื่อนกำหนดส่งยอดได้จากรายการ</p>
+        <p class="accounting-description">กดปุ่ม <b>＋ บันทึกรับเงิน</b> เมื่อลูกค้าส่งยอด หรือกด <b>เลื่อนวันส่งยอด</b> เมื่อต้องการเปลี่ยนวันนัดชำระครั้งถัดไป</p>
         <section class="accounting-due-today card" aria-labelledby="accountingDueTodayTitle">
-          <div class="accounting-due-today-heading"><div><p class="eyebrow">TODAY'S COLLECTION</p><h3 id="accountingDueTodayTitle">รายการที่ต้องส่งยอดวันนี้</h3><p>ตรวจสอบรายการและสถานะการส่งยอดประจำวันนี้</p></div><span class="accounting-due-today-date" id="accountingDueTodayDate"></span></div>
+          <div class="accounting-due-today-heading"><div><p class="eyebrow">TODAY'S COLLECTION</p><h3 id="accountingDueTodayTitle">รายการที่ต้องส่งยอดวันนี้</h3><p>ตรวจสอบรายการที่ครบกำหนดส่งยอดประจำวันนี้</p></div><span class="accounting-due-today-date" id="accountingDueTodayDate"></span></div>
           <div class="accounting-due-today-stats"><span id="accountingDueTodayCount">0 รายการ</span><span id="accountingDueTodayPending">ยังไม่ส่งยอด 0</span><span id="accountingDueTodayPaid">ส่งยอดแล้ว 0</span></div>
           <div id="accountingDueTodayList" class="accounting-due-today-list"><p class="accounting-empty">ไม่มีรายการที่ต้องส่งยอดวันนี้</p></div>
         </section>
+        <div class="accounting-installment-controls card">
+          <input type="search" id="installmentSearchInput" class="accounting-search-input" placeholder="ค้นหาชื่อไอดี..." aria-label="ค้นหาชื่อไอดี">
+          <div class="accounting-filter-group" role="tablist" aria-label="กรองสถานะการผ่อน">
+            <button type="button" class="accounting-filter-btn is-active" data-installment-filter="all">ทั้งหมด</button>
+            <button type="button" class="accounting-filter-btn" data-installment-filter="attention">ต้องส่งวันนี้ / เลยกำหนด</button>
+            <button type="button" class="accounting-filter-btn" data-installment-filter="open">กำลังผ่อน</button>
+            <button type="button" class="accounting-filter-btn" data-installment-filter="paid">ปิดยอดแล้ว</button>
+          </div>
+        </div>
         <div id="accountingInstallmentList" class="accounting-entry-list"><p class="accounting-empty">ยังไม่มีรายการบัญชี</p></div>
       </section>
 
       <section class="accounting-panel" data-accounting-panel="transactions" hidden>
         <div class="accounting-section-heading"><div><p class="eyebrow">CASH RECEIVED</p><h2>รายการรับเงินจริง</h2></div><span class="accounting-month-chip" id="transactionMonthTotal">฿0</span></div>
-        <p class="accounting-description">แสดงวันที่รับเงินจริง ไม่ใช้วันที่สร้าง Account แทนวันที่รับชำระ</p>
+        <p class="accounting-description">แสดงประวัติเงินที่รับเข้าจริงตามวันที่รับโอน (สามารถแก้ไขหรือลบรายการที่ลงผิดได้)</p>
         <div id="accountingTransactionList" class="accounting-card card"><p class="accounting-empty">ยังไม่มีรายการรับเงินในเดือนนี้</p></div>
       </section>
 
       <section class="accounting-panel" data-accounting-panel="import" hidden>
-        <div class="accounting-section-heading"><div><p class="eyebrow">ACCOUNT SYNC</p><h2>ตรวจสอบก่อนนำเข้าบัญชี</h2></div><span class="accounting-month-chip" id="accountingPendingChip">0 รายการ</span></div>
-        <div class="accounting-import-warning"><strong>โปรดตรวจสอบยอดก่อนกดนำเข้า</strong><p>ไอดีติดผ่อนที่มีอยู่ก่อนเริ่มระบบจะถูกนำเข้าเป็น “ยอดยกมา” โดยต้องกรอกยอดคงเหลือจริง ณ 1 พ.ย. 2569 เอง ส่วนไอดีขายเก่าที่มีสถานะขายแล้วแต่ไม่มีวันเริ่มขายใหม่จะไม่ถูกนำเข้าหรือคิดยอดย้อนหลัง</p></div>
-        <div class="accounting-subsection"><h3>ไอดีติดผ่อนเดิม · ยอดยกมา 1 พ.ย. 2569</h3><div id="accountingCarryoverCandidates" class="accounting-import-list"><p class="accounting-empty">ไม่มีรายการรอตรวจสอบ</p></div></div>
-        <div class="accounting-subsection"><h3>รายการขายใหม่ตั้งแต่ 1 พ.ย. 2569</h3><div id="accountingNewCandidates" class="accounting-import-list"><p class="accounting-empty">ไม่มีรายการรอตรวจสอบ</p></div></div>
+        <div class="accounting-section-heading"><div><p class="eyebrow">ACCOUNT SYNC</p><h2>นำเข้าไอดีเก่า / รายการตกค้าง</h2></div><span class="accounting-month-chip" id="accountingPendingChip">0 รายการ</span></div>
+        <div class="accounting-import-warning">
+          <strong>ไอดีที่ขายใหม่เข้าสู่ระบบบัญชีให้อัตโนมัติแล้ว</strong>
+          <p>เมื่อคุณเปลี่ยนสถานะ Account เป็น “ติดผ่อน” หรือ “ขายแล้ว” ในหน้าจัดการร้าน ระบบจะสร้างรายการบัญชีและลงเงินดาวน์ให้อัตโนมัติทันที ไม่ต้องมากดนำเข้าในหน้านี้ (หน้านี้มีไว้สำหรับไอดียกมาเก่าก่อนเริ่มระบบ หรือรายการที่ยังไม่ได้เชื่อมบัญชีเท่านั้น)</p>
+        </div>
+        <div id="accountingImportEmptyBanner" class="accounting-card card" hidden>
+          <div class="accounting-sync-complete">
+            <strong>ข้อมูลทุกไอดีซิงก์เข้าบัญชีครบถ้วนแล้ว ♡</strong>
+            <p>ไม่มีรายการตกค้างที่ต้องกดนำเข้าด้วยตัวเอง คุณสามารถจัดการค่างวดและเลื่อนวันส่งยอดได้ที่แท็บจัดการยอดผ่อน</p>
+            <button type="button" class="primary-button" data-open-tab="installments">ไปหน้าจัดการยอดผ่อน</button>
+          </div>
+        </div>
+        <div id="accountingImportSections">
+          <div class="accounting-subsection"><h3>ไอดีติดผ่อนเดิม · ยอดยกมา 1 พ.ย. 2569</h3><div id="accountingCarryoverCandidates" class="accounting-import-list"><p class="accounting-empty">ไม่มีรายการรอตรวจสอบ</p></div></div>
+          <div class="accounting-subsection"><h3>รายการขายใหม่ที่ยังไม่ได้เชื่อมบัญชี</h3><div id="accountingNewCandidates" class="accounting-import-list"><p class="accounting-empty">ไม่มีรายการรอตรวจสอบ</p></div></div>
+        </div>
       </section>
     </section>
 
+    <dialog class="accounting-payment-dialog" id="accountingPostponeDialog">
+      <form id="accountingPostponeForm" method="dialog">
+        <div class="accounting-dialog-heading">
+          <div>
+            <p class="eyebrow">RESCHEDULE DUE DATE</p>
+            <h2>เลื่อนวันส่งยอด</h2>
+            <p id="accountingPostponeTitle"></p>
+          </div>
+          <button type="button" id="closeAccountingPostpone" aria-label="ปิด">×</button>
+        </div>
+        <input type="hidden" id="postponeEntryId">
+        <div class="accounting-dialog-summary" id="accountingPostponeCurrentInfo"></div>
+        <div class="accounting-quick-dates">
+          <span>เลื่อนด่วน:</span>
+          <button type="button" class="accounting-chip-btn" data-postpone-offset="1">+1 วัน</button>
+          <button type="button" class="accounting-chip-btn" data-postpone-offset="2">+2 วัน</button>
+          <button type="button" class="accounting-chip-btn" data-postpone-offset="3">+3 วัน</button>
+          <button type="button" class="accounting-chip-btn" data-postpone-offset="7">+7 วัน (สัปดาห์หน้า)</button>
+        </div>
+        <label>วันที่นัดชำระครั้งถัดไป (เลือกวันที่ใหม่)<input id="postponeDueDate" type="date" required></label>
+        <label>รูปแบบการส่งยอด<select id="postponeScheduleType"><option value="weekly">รายสัปดาห์</option><option value="daily">รายวัน</option><option value="every_other_day">วันเว้นวัน</option></select></label>
+        <div id="postponeWeeklyModeWrap" class="accounting-postpone-mode-box">
+          <label>การนับรอบสัปดาห์ถัดไป
+            <select id="postponeWeeklyMode">
+              <option value="change_weekday">เปลี่ยนวันประจำสัปดาห์ตามวันที่เลือกใหม่</option>
+              <option value="keep_weekday">เลื่อนเฉพาะงวดนี้ (งวดหน้ากลับไปส่งวันประจำสัปดาห์เดิม)</option>
+            </select>
+          </label>
+          <small class="accounting-field-hint" id="postponeWeeklyHint"></small>
+        </div>
+        <label>หมายเหตุการเลื่อน (ไม่บังคับ)<input id="postponeNote" maxlength="250" placeholder="เช่น ลูกค้าขอเลื่อนนัดจ่าย 2 วัน"></label>
+        <p class="form-message" id="accountingPostponeMessage" role="status"></p>
+        <div class="accounting-dialog-actions">
+          <button type="button" class="secondary-button" id="cancelAccountingPostpone">ยกเลิก</button>
+          <button type="submit" class="primary-button">บันทึกวันนัดใหม่</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="accounting-payment-dialog" id="accountingEntryEditDialog">
       <form id="accountingEntryEditForm" method="dialog">
-        <div class="accounting-dialog-heading"><div><p class="eyebrow">EDIT LEDGER</p><h2>แก้ไขรายการบัญชี</h2><p id="accountingEntryEditTitle"></p></div><button type="button" id="closeAccountingEntryEdit" aria-label="ปิด">×</button></div>
+        <div class="accounting-dialog-heading"><div><p class="eyebrow">EDIT LEDGER</p><h2>แก้ไขข้อมูลบัญชี / ยอดตั้งต้น</h2><p id="accountingEntryEditTitle"></p></div><button type="button" id="closeAccountingEntryEdit" aria-label="ปิด">×</button></div>
         <input type="hidden" id="editAccountingEntryId">
-        <label>วันที่ขาย<input id="editAccountingSaleDate" type="date" required></label>
-        <label>ยอดที่ลูกค้าต้องชำระทั้งหมด / ยอดขายรวม (บาท)<input id="editAccountingSaleAmount" type="number" min="0" step="0.01" required></label>
+        <label>วันที่เริ่มขาย<input id="editAccountingSaleDate" type="date" required></label>
+        <label>ยอดขายรวมทั้งสัญญา (เงินดาวน์ + ยอดผ่อนรวม, บาท)<input id="editAccountingSaleAmount" type="number" min="0" step="0.01" required></label>
         <label>ต้นทุนไอดี (บาท)<input id="editAccountingCostAmount" type="number" min="0" step="0.01" required></label>
-        <label>ยอดตั้งต้นสำหรับคำนวณยอดค้าง (บาท)<input id="editAccountingOpeningBalance" type="number" min="0" step="0.01" required></label>
-        <label>ยอดชำระต่อรอบ (บาท)<input id="editAccountingWeeklyAmount" type="number" min="0" step="0.01"></label>
+        <label>ยอดเต็มที่ใช้หักลบเงินรับ (ปกติจะเท่ากับยอดขายรวม, บาท)<input id="editAccountingOpeningBalance" type="number" min="0" step="0.01" required><small class="accounting-field-hint">ระบบคำนวณ “ยอดคงเหลือ = ยอดเต็มนี้ − เงินที่รับมาแล้วทั้งหมด”</small></label>
+        <label>ยอดชำระต่องวด (บาท)<input id="editAccountingWeeklyAmount" type="number" min="0" step="0.01"></label>
         <label>รูปแบบการส่งยอด<select id="editAccountingScheduleType"><option value="weekly">รายสัปดาห์</option><option value="daily">รายวัน</option><option value="every_other_day">วันเว้นวัน</option></select></label>
-        <label>วันที่ต้องการเลื่อน / วันที่เริ่มรอบ<input id="editAccountingDueDate" type="date" required><small class="accounting-field-hint">รายสัปดาห์: วันที่เลือกจะใช้กำหนดวันประจำสัปดาห์ · รายวัน/วันเว้นวัน: ใช้เป็นวันเริ่มต้นรอบใหม่</small></label>
+        <label>กำหนดชำระครั้งถัดไป / วันที่เริ่มรอบ<input id="editAccountingDueDate" type="date" required><small class="accounting-field-hint">วันที่ที่เลือกจะแสดงเป็น “กำหนดชำระครั้งถัดไป” บนการ์ดทันที</small></label>
         <div id="editAccountingWeekdayField" hidden><label>วันส่งยอดประจำสัปดาห์<select id="editAccountingDueWeekday"><option value="">ไม่กำหนด</option><option value="0">วันอาทิตย์</option><option value="1">วันจันทร์</option><option value="2">วันอังคาร</option><option value="3">วันพุธ</option><option value="4">วันพฤหัสบดี</option><option value="5">วันศุกร์</option><option value="6">วันเสาร์</option></select></label></div><div id="editAccountingStartDateField" hidden></div>
         <label>หมายเหตุ<input id="editAccountingNotes" maxlength="500"></label>
         <p class="form-message" id="accountingEntryEditMessage" role="status"></p>
@@ -133,12 +232,14 @@
     </dialog>
     <dialog class="accounting-payment-dialog" id="accountingPaymentDialog">
       <form id="accountingPaymentForm" method="dialog">
-        <div class="accounting-dialog-heading"><div><p class="eyebrow">ADD PAYMENT</p><h2>บันทึกรับเงิน</h2><p id="accountingPaymentAccount"></p></div><button type="button" id="closeAccountingPayment" aria-label="ปิด">×</button></div>
+        <div class="accounting-dialog-heading"><div><p class="eyebrow">ADD PAYMENT</p><h2>บันทึกรับเงินค่างวด</h2><p id="accountingPaymentAccount"></p></div><button type="button" id="closeAccountingPayment" aria-label="ปิด">×</button></div>
         <input type="hidden" id="paymentEntryId">
+        <div class="accounting-quick-dates" id="paymentQuickAmounts"></div>
         <label>จำนวนเงินที่ได้รับ (บาท)<input id="paymentAmount" type="number" min="0.01" step="0.01" required></label>
+        <div class="accounting-dialog-summary" id="paymentBalancePreview"></div>
         <label>วันที่รับเงินจริง<input id="paymentDate" type="date" required></label>
         <label>ประเภท<select id="paymentType"><option value="installment">ค่างวด</option><option value="deposit">เงินมัดจำ</option><option value="other">อื่น ๆ</option></select></label>
-        <label>หมายเหตุ<input id="paymentNote" maxlength="250" placeholder="เช่น งวดที่ 2 / โอนผ่านธนาคาร"></label>
+        <label>หมายเหตุ (ไม่บังคับ)<input id="paymentNote" maxlength="250" placeholder="เช่น งวดที่ 2 / โอนผ่านธนาคาร"></label>
         <p class="form-message" id="accountingPaymentMessage" role="status"></p>
         <div class="accounting-dialog-actions"><button type="button" class="secondary-button" id="cancelAccountingPayment">ยกเลิก</button><button type="submit" class="primary-button">บันทึกรายการรับเงิน</button></div>
       </form>
