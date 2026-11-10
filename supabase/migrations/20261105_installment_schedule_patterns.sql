@@ -48,7 +48,7 @@ begin
   end if;
 
   v_handoff_at := coalesce(new.accounting_handoff_at, v_account.sale_started_at);
-  if v_handoff_at is null or coalesce(v_account.accounting_carryover,false) then
+  if v_handoff_at is null then
     return new;
   end if;
   if v_handoff_at < timestamptz '2026-11-01 00:00:00+07' then

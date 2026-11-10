@@ -237,14 +237,16 @@
       const schedule = scheduleDueState(entry);
       const overdue = due > 0.009 && schedule.overdue;
       const dueToday = due > 0.009 && schedule.dueToday;
+      const isCashSale = due <= 0.009 && Number(entry.weekly_amount || 0) <= 0 && !entry.is_carryover && String(entry.notes || '').includes('สถานะขายแล้ว');
       const statusClass = due <= 0.009 ? 'is-paid' : overdue ? 'is-overdue' : dueToday ? 'is-open' : 'is-open';
-      const statusLabel = due <= 0.009 ? 'ปิดยอดแล้ว' : overdue ? 'เลยกำหนดส่งยอด' : dueToday ? 'ถึงวันส่งยอดวันนี้ · ยังไม่ส่ง' : 'กำลังผ่อน';
+      const statusLabel = isCashSale ? 'ขายสด · ปิดยอดแล้ว' : due <= 0.009 ? 'ปิดยอดแล้ว' : overdue ? 'เลยกำหนดส่งยอด' : dueToday ? 'ถึงวันส่งยอดวันนี้ · ยังไม่ส่ง' : 'กำลังผ่อน';
+      const profitLabel = isCashSale ? 'กำไรจากการขายสด' : due <= 0.009 ? 'กำไรสุทธิ (ผ่อนครบแล้ว)' : 'กำไรเมื่อลูกค้าผ่อนครบ';
       const history = paymentsFor(entry.id).slice().sort((a,b) => b.paid_on.localeCompare(a.paid_on));
       return '<article class="accounting-entry-card card">' +
         '<div class="accounting-entry-top"><div><span class="accounting-status ' + statusClass + '">' + statusLabel + '</span>' + (entry.is_carryover ? '<span class="accounting-carry-tag">ยอดยกมา</span>' : '') +
         '<h3>' + escapeHtml(entry.account_title) + '</h3><small>วันที่ขาย ' + formatDate(entry.sale_date) + (schedule.label ? ' · ' + schedule.label : '') + '</small>' + (schedule.nextDate && due > 0.009 ? '<small class="accounting-next-due">กำหนดชำระครั้งถัดไป: <b>' + formatDate(schedule.nextDate) + '</b></small>' : '') + '</div><strong class="accounting-due">' + money(due) + '<small>ยอดคงเหลือ</small></strong></div>' +
         '<div class="accounting-entry-numbers"><span>ยอดขายรวม <b>' + money(entry.sale_amount) + '</b></span><span>ต้นทุน <b>' + money(entry.cost_amount) + '</b></span><span>รับเงินแล้ว <b>' + money(paidSoFar) + '</b></span><span>คงเหลือ <b>' + money(due) + '</b></span>' + (Number(entry.weekly_amount)>0 ? '<span>ยอดต่องวด <b>' + money(entry.weekly_amount) + '</b></span>' : '') + '</div>' +
-        '<div class="accounting-expected-profit ' + (expectedProfit >= 0 ? 'is-positive' : 'is-negative') + '"><span>กำไรเมื่อลูกค้าผ่อนครบ</span><strong>' + (expectedProfit > 0 ? '+' : '') + money(expectedProfit) + '</strong><small>' + escapeHtml(cashStatusText) + '</small></div>' +
+        '<div class="accounting-expected-profit ' + (expectedProfit >= 0 ? 'is-positive' : 'is-negative') + '"><span>' + profitLabel + '</span><strong>' + (expectedProfit > 0 ? '+' : '') + money(expectedProfit) + '</strong><small>' + escapeHtml(cashStatusText) + '</small></div>' +
         '<div class="accounting-entry-actions">' + (due > 0.009 ? '<button type="button" class="primary-button" data-record-payment="' + entry.id + '">＋ บันทึกรับเงิน</button><button type="button" class="secondary-button accounting-postpone-btn" data-postpone-entry="' + entry.id + '">เลื่อนวันส่งยอด</button>' : '<span class="accounting-paid-note">ชำระครบแล้ว ♡</span>') +
         '<button type="button" class="accounting-text-button" data-edit-entry="' + entry.id + '">แก้ไขข้อมูลบัญชี</button>' + ((entry.installment_due_weekday!=null || entry.installment_due_date!=null) && entry.source_account_id ? '<button type="button" class="accounting-text-button" data-release-installment="' + entry.id + '">ลูกค้าหลุดผ่อน / คืนสถานะพร้อมขาย</button>' : '') +
         '<button type="button" class="accounting-text-button" data-toggle-history="' + entry.id + '">ประวัติรับเงิน (' + history.length + ')</button></div>' +
@@ -304,6 +306,8 @@
     $('accountingPendingChip').textContent = count + ' รายการ';
     if ($('accountingImportEmptyBanner')) $('accountingImportEmptyBanner').hidden = count > 0;
     if ($('accountingImportSections')) $('accountingImportSections').hidden = count === 0;
+    const newSection = $('accountingNewCandidates')?.closest('.accounting-subsection');
+    if (newSection) newSection.hidden = pending.newSales.length === 0;
     $('accountingCarryoverCandidates').innerHTML = pending.carryovers.length ? pending.carryovers.map(account => importCard(account, true)).join('') : '<p class="accounting-empty">ไม่มีไอดีติดผ่อนเดิมที่รอนำเข้า</p>';
     $('accountingNewCandidates').innerHTML = pending.newSales.length ? pending.newSales.map(account => importCard(account, false)).join('') : '<p class="accounting-empty">ยังไม่มีรายการขายใหม่ที่รอนำเข้า</p>';
   }
@@ -315,13 +319,102 @@
     renderImportCandidates();
   }
 
+  async function autoSyncNewSales() {
+    const pending = getPendingImports();
+    if (!pending.newSales.length) return 0;
+    let syncedCount = 0;
+    for (const account of pending.newSales) {
+      try {
+        if (account.accounting_carryover) {
+          await db.from('accounts').update({accounting_carryover: false}).eq('id', account.id);
+          account.accounting_carryover = false;
+        }
+        const saleDate = bangkokDate(account.accounting_handoff_at || account.sale_started_at) || today();
+        const costAmount = Math.max(0, Number(account.acquisition_cost || 0));
+        let saleAmount = 0;
+        let initialReceived = 0;
+        let weeklyAmount = 0;
+        let dueWeekday = null;
+        let scheduleType = 'weekly';
+        let dueDate = null;
+        let paymentType = 'other';
+        let paymentNote = '';
+        let entryNote = '';
+
+        if (account.status === 'installment') {
+          const plans = parsePlans(account.installment_details);
+          const planIndex = Math.max(0, Number(account.installment_plan_index || 0));
+          const plan = plans[planIndex] || plans[0] || {};
+          const down = Math.max(0, Number(plan.down || 0));
+          const planTotal = Math.max(0, Number(plan.total || 0));
+          weeklyAmount = Math.max(0, Number(plan.weekly || 0));
+          saleAmount = (down + planTotal) > 0 ? (down + planTotal) : Math.max(0, Number(account.price || 0));
+          initialReceived = Math.min(saleAmount, down);
+          dueWeekday = account.installment_due_weekday;
+          scheduleType = account.installment_schedule_type || 'weekly';
+          dueDate = account.installment_due_date || null;
+          paymentType = 'deposit';
+          paymentNote = 'เงินดาวน์เริ่มต้นจากการเปลี่ยนสถานะ Account';
+          entryNote = 'สร้างอัตโนมัติจากสถานะติดผ่อน';
+        } else {
+          saleAmount = Math.max(0, Number(account.actual_sale_price != null ? account.actual_sale_price : account.price || 0));
+          initialReceived = saleAmount;
+          weeklyAmount = 0;
+          dueWeekday = null;
+          scheduleType = 'weekly';
+          dueDate = null;
+          paymentType = 'other';
+          paymentNote = 'ยอดรับเต็มตามราคาขายจริงจากการเปลี่ยนสถานะ Account';
+          entryNote = 'สร้างอัตโนมัติจากสถานะขายแล้ว';
+        }
+
+        const {data: entry, error: entryError} = await db.from('accounting_entries').insert({
+          source_account_id: account.id,
+          account_title: account.title || 'Account #' + account.id,
+          sale_date: saleDate,
+          sale_amount: saleAmount,
+          cost_amount: costAmount,
+          opening_balance: saleAmount,
+          weekly_amount: weeklyAmount,
+          installment_due_weekday: dueWeekday,
+          installment_schedule_type: scheduleType,
+          installment_due_date: dueDate,
+          is_carryover: false,
+          notes: entryNote
+        }).select('*').single();
+
+        if (entryError) {
+          console.warn('Auto-sync entry failed for account', account.id, entryError);
+          continue;
+        }
+        entries.unshift(entry);
+        if (initialReceived > 0) {
+          const {data: payment, error: paymentError} = await db.from('accounting_payments').insert({
+            entry_id: entry.id,
+            amount: initialReceived,
+            paid_on: saleDate,
+            payment_type: paymentType,
+            note: paymentNote
+          }).select('*').single();
+          if (!paymentError && payment) {
+            payments.unshift(payment);
+          }
+        }
+        syncedCount++;
+      } catch (err) {
+        console.warn('Auto-sync error for account', account.id, err);
+      }
+    }
+    return syncedCount;
+  }
+
   async function loadData() {
     setMessage('กำลังโหลดข้อมูลบัญชี…');
     const results = await Promise.all([
       db.from('accounting_entries').select('*').order('sale_date', {ascending:false}),
       db.from('accounting_payments').select('*').order('paid_on', {ascending:false}),
       db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,accounting_handoff_at,actual_sale_price')
+      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
     const issue = results.find(result => result.error);
     if (issue) {
@@ -342,12 +435,18 @@
         installment_due_weekday: financials.installment_due_weekday == null ? null : Number(financials.installment_due_weekday),
         installment_schedule_type: financials.installment_schedule_type || 'weekly',
         installment_due_date: financials.installment_due_date || null,
+        installment_plan_index: Number(financials.installment_plan_index || 0),
         accounting_handoff_at: financials.accounting_handoff_at || null,
         actual_sale_price: financials.actual_sale_price == null ? null : Number(financials.actual_sale_price)
       };
     });
+    const autoSynced = await autoSyncNewSales();
     renderAll();
-    setMessage('');
+    if (autoSynced > 0) {
+      setMessage('ซิงก์รายการขายสด/ติดผ่อนใหม่ ' + autoSynced + ' รายการเข้าบัญชีและคำนวณกำไรอัตโนมัติแล้ว ♡');
+    } else {
+      setMessage('');
+    }
   }
 
   async function requireAdmin(user) {
@@ -875,9 +974,10 @@
           updated_at: new Date().toISOString()
         }).eq('id', entry.id);
         if (entryError) throw entryError;
-        const {error:accountError} = await db.from('accounts').update({status:'available',sale_started_at:null,updated_at:new Date().toISOString()}).eq('id',entry.source_account_id);
+        const {error:accountError} = await db.from('accounts').update({status:'available',sale_started_at:null,accounting_carryover:false,updated_at:new Date().toISOString()}).eq('id',entry.source_account_id);
         if (accountError) throw accountError;
         const {error:financialError} = await db.from('account_private_financials').update({
+          acquisition_cost:netCost,
           accounting_handoff_at:null,
           actual_sale_price:null,
           installment_due_weekday:null,

@@ -350,7 +350,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       if(existing&&!accountDescriptionDirty&&!accountStructuredDetailsDirty)description=accountDescriptionOriginal;
       else if(existing&&!accountDescriptionDirty)description=[structuredDescription,extractPreservedAdditionalDescription(accountDescriptionOriginal)].filter(Boolean).join(String.fromCharCode(10)+String.fromCharCode(10));
       else description=[structuredDescription,typedAdditionalDescription].filter(Boolean).join(String.fromCharCode(10)+String.fromCharCode(10));
-      const payload={title:$('accountTitle').value.trim(),description,installment_details:buildInstallmentDetails(),price:Number($('accountPrice').value),status:nextStatus,sale_started_at,image_url,updated_at:new Date().toISOString()};
+      const payload={title:$('accountTitle').value.trim(),description,installment_details:buildInstallmentDetails(),price:Number($('accountPrice').value),status:nextStatus,sale_started_at,...(transitionedToAccounting||nextStatus==='available'?{accounting_carryover:false}:{}),image_url,updated_at:new Date().toISOString()};
       let savedAccountId=id;
       if(id){const {error}=await db.from('accounts').update(payload).eq('id',id);if(error)throw error;}
       else{const {data,error}=await db.from('accounts').insert(payload).select('id').single();if(error)throw error;savedAccountId=data.id;}
@@ -359,7 +359,41 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
       if(['installment','sold'].includes(nextStatus)&&accountingHandoffAt){
         const {data:accountingEntry,error:accountingVerifyError}=await db.from('accounting_entries').select('id').eq('source_account_id',savedAccountId).maybeSingle();
         if(accountingVerifyError)throw new Error('บันทึก Account แล้ว แต่ตรวจสอบ Accounting ไม่สำเร็จ: '+accountingVerifyError.message);
-        if(!accountingEntry)throw new Error('บันทึกสถานะแล้ว แต่ยังไม่พบรายการใน Accounting อัตโนมัติ กรุณารัน Migration 20261103_account_auto_sync.sql ใน Supabase SQL Editor แล้วบันทึก Account อีกครั้ง');
+        if(!accountingEntry){
+          const bkkParts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(accountingHandoffAt));
+          const part=t=>bkkParts.find(i=>i.type===t).value;
+          const saleDate=`${part('year')}-${part('month')}-${part('day')}`;
+          const plans=parseInstallmentPlans(payload.installment_details);
+          const plan=plans[installmentPlanIndex]||plans[0]||{};
+          const down=Math.max(0,Number(plan.down||0)),planTotal=Math.max(0,Number(plan.total||0));
+          const saleAmount=nextStatus==='sold'?Math.max(0,Number(actualSalePrice??payload.price??0)):((down+planTotal)>0?(down+planTotal):Math.max(0,Number(payload.price||0)));
+          const initialReceived=nextStatus==='sold'?saleAmount:Math.min(saleAmount,down);
+          const weeklyAmount=nextStatus==='installment'?Math.max(0,Number(plan.weekly||0)):0;
+          const {data:createdEntry,error:insertEntryError}=await db.from('accounting_entries').insert({
+            source_account_id:savedAccountId,
+            account_title:payload.title||'Account #'+savedAccountId,
+            sale_date:saleDate,
+            sale_amount:saleAmount,
+            cost_amount:Math.max(0,Number(costValue||0)),
+            opening_balance:saleAmount,
+            weekly_amount:weeklyAmount,
+            installment_due_weekday:installmentDueWeekday===''?null:Number(installmentDueWeekday),
+            installment_schedule_type:installmentScheduleType,
+            installment_due_date:installmentDueDate||null,
+            is_carryover:false,
+            notes:nextStatus==='installment'?'สร้างอัตโนมัติจากสถานะติดผ่อน':'สร้างอัตโนมัติจากสถานะขายแล้ว'
+          }).select('id').single();
+          if(insertEntryError)throw new Error('บันทึกสถานะแล้ว แต่สร้างรายการ Accounting อัตโนมัติไม่สำเร็จ: '+insertEntryError.message);
+          if(createdEntry&&initialReceived>0){
+            await db.from('accounting_payments').insert({
+              entry_id:createdEntry.id,
+              amount:initialReceived,
+              paid_on:saleDate,
+              payment_type:nextStatus==='installment'?'deposit':'other',
+              note:nextStatus==='installment'?'เงินดาวน์เริ่มต้นจากการเปลี่ยนสถานะ Account':'ยอดรับเต็มตามราคาขายจริงจากการเปลี่ยนสถานะ Account'
+            });
+          }
+        }
       }
       resetAccountForm();await refreshAccounts();
       const sentToAccounting=['installment','sold'].includes(nextStatus)&&!!accountingHandoffAt;
