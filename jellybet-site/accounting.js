@@ -5,6 +5,8 @@
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
   const START_DATE = '2026-11-01';
   const INSTALLMENT_MARKER = '[[JELLYBET_INSTALLMENT_PLANS]]';
+  const ACCOUNTING_ENTRY_COLUMNS = 'id,source_account_id,account_title,sale_date,sale_amount,cost_amount,opening_balance,weekly_amount,installment_due_weekday,installment_schedule_type,installment_due_date,is_carryover,is_forfeited,forfeited_at,notes,created_at,updated_at';
+  const ACCOUNTING_PAYMENT_COLUMNS = 'id,entry_id,amount,paid_on,payment_type,note,created_at';
   let currentUser = null;
   let accounts = [];
   let entries = [];
@@ -381,7 +383,7 @@
           installment_due_date: dueDate,
           is_carryover: false,
           notes: entryNote
-        }).select('*').single();
+        }).select(ACCOUNTING_ENTRY_COLUMNS).single();
 
         if (entryError) {
           console.warn('Auto-sync entry failed for account', account.id, entryError);
@@ -395,7 +397,7 @@
             paid_on: saleDate,
             payment_type: paymentType,
             note: paymentNote
-          }).select('*').single();
+          }).select(ACCOUNTING_PAYMENT_COLUMNS).single();
           if (!paymentError && payment) {
             payments.unshift(payment);
           }
@@ -411,8 +413,8 @@
   async function loadData() {
     setMessage('กำลังโหลดข้อมูลบัญชี…');
     const results = await Promise.all([
-      db.from('accounting_entries').select('*').order('sale_date', {ascending:false}),
-      db.from('accounting_payments').select('*').order('paid_on', {ascending:false}),
+      db.from('accounting_entries').select(ACCOUNTING_ENTRY_COLUMNS).order('sale_date', {ascending:false}),
+      db.from('accounting_payments').select(ACCOUNTING_PAYMENT_COLUMNS).order('paid_on', {ascending:false}),
       db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false}),
       db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
@@ -500,7 +502,7 @@
     if (!carryover && account.status === 'installment' && plans.length && payload.sale_amount < Number(plan.down || 0) + Number(plan.total || 0)) {
       throw new Error('ยอดขายจริงน้อยกว่ายอดรวมของแผนผ่อนที่เลือก โปรดตรวจสอบ');
     }
-    const {data:entry,error} = await db.from('accounting_entries').insert(payload).select('*').single();
+    const {data:entry,error} = await db.from('accounting_entries').insert(payload).select(ACCOUNTING_ENTRY_COLUMNS).single();
     if (error) throw error;
     if (received > 0) {
       const {error:paymentError} = await db.from('accounting_payments').insert({

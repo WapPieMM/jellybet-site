@@ -21,6 +21,14 @@ app.get('/account/:id', (_req, res) => {
   res.sendFile(path.join(staticDir, 'account.html'));
 });
 
+app.use(
+  '/assets',
+  express.static(path.join(staticDir, 'assets'), {
+    maxAge: '365d',
+    immutable: true,
+  })
+);
+
 app.use(express.static(staticDir));
 
 app.listen(PORT, '0.0.0.0', () => {

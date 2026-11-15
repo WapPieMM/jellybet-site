@@ -3,13 +3,72 @@
   const cfg = window.JELLYBET_CONFIG || {};
   const configured = !!(window.supabase && cfg.supabaseUrl && cfg.supabaseAnonKey && !cfg.supabaseUrl.includes('YOUR-PROJECT') && !cfg.supabaseAnonKey.includes('YOUR_SUPABASE'));
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
-  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', portfolio_drive_url: '', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '', cover_url: '', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'', mood_bunny_url:'', mood_vanity_url:'' };
+  const defaultSettings = { id: 1, shop_name: 'jellybet', intro: 'ยินดีต้อนรับสู่หน้ารวมเครดิตและช่องทางติดต่อของร้านนะคะ ขอบคุณที่ไว้วางใจและสนับสนุนกันเสมอ ♡', handle: 'a little place made with love', portfolio_drive_url: '', status: 'open', line: '', x: '', instagram: '', facebook: '', avatar_url: '/assets/shop-avatar.jpeg', cover_url: '/assets/shop-cover.jpeg', theme_preset:'coquette', theme_bg:'#fffaf4', theme_card:'#fffdfb', theme_primary:'#d994ad', theme_soft:'#fff0f5', theme_text:'#59434b', account_entry_image_1:'', account_entry_image_2:'', mood_bunny_url:'/assets/mood-bunny.jpeg', mood_vanity_url:'/assets/mood-vanity.gif' };
   let settings = { ...defaultSettings }, reviews = [], accounts = [], musicTracks = [], currentUser = null;
   let accountCosts = new Map();
   let accountFinancials = new Map();
   let accountDescriptionOriginal = '';
   let accountDescriptionDirty = false;
   let accountStructuredDetailsDirty = false;
+  let adminDataLoaded = false;
+
+  const SITE_SETTINGS_COLUMNS = 'id,shop_name,intro,handle,portfolio_drive_url,status,line,x,instagram,facebook,avatar_url,cover_url,theme_preset,theme_bg,theme_card,theme_primary,theme_soft,theme_text,account_entry_image_1,account_entry_image_2,mood_bunny_url,mood_vanity_url';
+  const PUBLIC_ACCOUNT_COLUMNS = 'id,title,price,status,image_url,description,created_at';
+  const ADMIN_ACCOUNT_COLUMNS = 'id,title,description,installment_details,price,status,sale_started_at,accounting_carryover,image_url,created_at';
+  const REVIEW_COLUMNS = 'id,customer_name,rating,review_text,image_url,published,created_at';
+  const SITE_MUSIC_COLUMNS = 'id,title,audio_url,enabled';
+  const CACHE_TTL_MS = 5 * 60 * 1000;
+
+  const STATIC_ASSET_MAP = {
+    'f742ad78-4525-4d48-b8d5-4e9e16135664.jpeg': '/assets/shop-avatar.jpeg',
+    '70a2edba-44c2-47a5-b4ea-f55143cc56e3.jpeg': '/assets/shop-cover.jpeg',
+    '21dbc287-0ae3-44d5-8001-9f6255bd7ead.jpeg': '/assets/mood-bunny.jpeg',
+    '4558c202-be25-461a-a0dc-2cfde2040831.gif': '/assets/mood-vanity.gif',
+    'store-music-1793437459381.mp3': '/assets/store-music.mp3'
+  };
+
+  function resolveStaticAssetUrl(url, fallback = '') {
+    const raw = String(url || '').trim();
+    if (!raw) return fallback;
+    for (const [key, localPath] of Object.entries(STATIC_ASSET_MAP)) {
+      if (raw.includes(key)) return localPath;
+    }
+    return raw;
+  }
+
+  function normalizeSettingsAssets(s) {
+    if (!s) return s;
+    return {
+      ...s,
+      avatar_url: resolveStaticAssetUrl(s.avatar_url, defaultSettings.avatar_url),
+      cover_url: resolveStaticAssetUrl(s.cover_url, defaultSettings.cover_url),
+      mood_bunny_url: resolveStaticAssetUrl(s.mood_bunny_url, defaultSettings.mood_bunny_url),
+      mood_vanity_url: resolveStaticAssetUrl(s.mood_vanity_url, defaultSettings.mood_vanity_url)
+    };
+  }
+
+  function readCache(key) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || Date.now() - Number(parsed.ts || 0) > CACHE_TTL_MS) return null;
+      return parsed.data;
+    } catch { return null; }
+  }
+
+  function writeCache(key, data) {
+    try { sessionStorage.setItem(key, JSON.stringify({ts: Date.now(), data})); } catch {}
+  }
+
+  function clearStorefrontCache() {
+    try {
+      Object.keys(sessionStorage).forEach(k => {
+        if (k.startsWith('jellybet_cache_')) sessionStorage.removeItem(k);
+      });
+    } catch {}
+  }
+
   const contactDefs = [
     {key:'line',label:'LINE',icon:'♡',hint:'พูดคุยและสอบถามข้อมูล'},
     {key:'x',label:'X / Twitter',icon:'𝕏',hint:'ติดตามข่าวสารของร้าน'},
@@ -39,6 +98,7 @@
   function updateThemePreview(){const el=$('themePreview');if(!el)return;const bg=$('themeBg')?.value||'#fffaf4',card=$('themeCard')?.value||'#fffdfb',primary=$('themePrimary')?.value||'#d994ad',soft=$('themeSoft')?.value||'#fff0f5',ink=$('themeText')?.value||'#59434b';el.style.background=bg;el.style.color=ink;el.querySelector('span').style.background=card;el.querySelector('button').style.background=primary;el.querySelector('button').style.color='#fff';el.style.borderColor=soft;}
   function setThemeInputs(theme){Object.entries({themePreset:theme.theme_preset,themeBg:theme.theme_bg,themeCard:theme.theme_card,themePrimary:theme.theme_primary,themeSoft:theme.theme_soft,themeText:theme.theme_text}).forEach(([id,v])=>{if($(id)&&v)$(id).value=v;});updateThemePreview();}
   function renderSettings(){
+    settings = normalizeSettingsAssets(settings);
     applyTheme(settings);
     const siteName = (settings.shop_name || 'jellybet').trim() || 'jellybet';
     document.title = `${siteName} ♡ เครดิตและช่องทางติดต่อ`;
@@ -47,8 +107,8 @@
     const headerName = $('headerSiteName'); if (headerName) headerName.textContent = siteName;
     const brand = $('siteBrand'); if (brand) brand.setAttribute('aria-label', `${siteName} หน้าแรก`);
     const moodboard = $('siteMoodboard'); if (moodboard) moodboard.setAttribute('aria-label', `${siteName} aesthetic`);
-    const bunnyImage=$('moodBunnyImage');if(bunnyImage&&settings.mood_bunny_url)bunnyImage.src=settings.mood_bunny_url;
-    const vanityImage=$('moodVanityImage');if(vanityImage&&settings.mood_vanity_url)vanityImage.src=settings.mood_vanity_url;
+    const bunnyImage=$('moodBunnyImage');if(bunnyImage&&settings.mood_bunny_url&&bunnyImage.getAttribute('src')!==settings.mood_bunny_url)bunnyImage.src=settings.mood_bunny_url;
+    const vanityImage=$('moodVanityImage');if(vanityImage&&settings.mood_vanity_url&&vanityImage.getAttribute('src')!==settings.mood_vanity_url)vanityImage.src=settings.mood_vanity_url;
     const moodName = $('moodboardSiteName'); if (moodName) moodName.textContent = `♡ ${siteName} ♡`;
     const noticeName = $('noticeSiteName'); if (noticeName) noticeName.textContent = siteName;
     const footerName = $('footerSiteName'); if (footerName) footerName.textContent = siteName;
@@ -57,7 +117,7 @@
     const adminTitle = $('adminTitle'); if (adminTitle) adminTitle.textContent = `หลังบ้านร้าน ${siteName}`;
     ['themePreset','themeBg','themeCard','themePrimary','themeSoft','themeText'].forEach((id)=>{const el=$(id); if(!el)return; const key={themePreset:'theme_preset',themeBg:'theme_bg',themeCard:'theme_card',themePrimary:'theme_primary',themeSoft:'theme_soft',themeText:'theme_text'}[id]; el.value=settings[key]||el.value;});
     updateThemePreview();
-    $('heroTitle').innerHTML = `${settings.avatar_url ? `<img class=\"shop-avatar\" src=\"${escapeHtml(settings.avatar_url)}\" alt=\"รูปโปรไฟล์ร้าน\">` : ''}${escapeHtml(settings.shop_name || 'jellybet')} <span>♡</span>`;
+    $('heroTitle').innerHTML = `${settings.avatar_url ? `<img class=\"shop-avatar\" src=\"${escapeHtml(settings.avatar_url)}\" alt=\"รูปโปรไฟล์ร้าน\" loading=\"lazy\" decoding=\"async\">` : ''}${escapeHtml(settings.shop_name || 'jellybet')} <span>♡</span>`;
     $('heroHandle').textContent = settings.handle || 'a little place made with love';
     $('heroIntro').textContent = settings.intro || defaultSettings.intro;
     const hero=$('hero'); if(hero){hero.style.backgroundImage=settings.cover_url ? `linear-gradient(90deg,rgba(255,250,248,.93),rgba(255,245,249,.78)),url(\"${settings.cover_url}\")` : ''; hero.style.backgroundSize='cover';hero.style.backgroundPosition='center';}
@@ -98,36 +158,45 @@
     if(!selectedIds.length)samples=candidates.slice(0,2);
     else if(samples.length<2)samples=samples.concat(candidates.filter(a=>!samples.some(s=>String(s.id)===String(a.id))).slice(0,2-samples.length));
     if(!samples.length){preview.hidden=true;preview.innerHTML='';return;}
-    preview.innerHTML=samples.map((a,i)=>`<figure class="account-entry-sample account-entry-sample-${i+1}"><img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title||'ตัวอย่าง Account')}" loading="lazy"><figcaption>${escapeHtml(a.title||'Account')}</figcaption></figure>`).join('');
+    preview.innerHTML=samples.map((a,i)=>`<figure class="account-entry-sample account-entry-sample-${i+1}"><img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title||'ตัวอย่าง Account')}" loading="lazy" decoding="async"><figcaption>${escapeHtml(a.title||'Account')}</figcaption></figure>`).join('');
     preview.hidden=false;
   }
   function renderAccounts(){
     renderAccountEntryPreview();
-    const grid=$('accountGrid'); if(!grid)return;
-    const available=accounts.filter(a=>a.status==='available'||a.status==='installment');
-    $('accountCount').textContent=`${available.length} พร้อมขาย/ติดผ่อน`;
-    grid.innerHTML=accounts.length ? accounts.map(a=>{
-      const sold=a.status==='sold', installment=a.status==='installment';
-      const statusLabel=sold?'ขายแล้ว':installment?'ติดผ่อน':'พร้อมขาย';
-      const statusClass=sold?'sold':installment?'installment':'available';
-      const image=a.image_url ? `<img class="account-image" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}" loading="lazy">` : '<div class="account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
-      const shortDescription=(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ').trim();
-      return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${statusClass}">${statusLabel}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description account-description-preview">${escapeHtml(shortDescription)}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong><a class="account-contact-button" href="/account/${encodeURIComponent(a.id)}">ดูเพิ่มเติม ↗</a></div></div></article>`;
-    }).join('') : '<div class="empty-state card account-empty"><span>୨୧</span><p>ยังไม่มี Account ลงขายในตอนนี้</p><small>แวะกลับมาดูรายการใหม่ได้อีกนะคะ ♡</small></div>';
-    renderAdminAccounts();
+    const grid=$('accountGrid');
+    if(grid){
+      const available=accounts.filter(a=>a.status==='available'||a.status==='installment');
+      $('accountCount').textContent=`${available.length} พร้อมขาย/ติดผ่อน`;
+      grid.innerHTML=accounts.length ? accounts.map(a=>{
+        const sold=a.status==='sold', installment=a.status==='installment';
+        const statusLabel=sold?'ขายแล้ว':installment?'ติดผ่อน':'พร้อมขาย';
+        const statusClass=sold?'sold':installment?'installment':'available';
+        const image=a.image_url ? `<img class="account-image" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}" loading="lazy" decoding="async">` : '<div class="account-image-placeholder"><span>୨୧</span><small>account details</small></div>';
+        const shortDescription=(a.description||'สอบถามรายละเอียดเพิ่มเติมได้ทางช่องทางติดต่อร้านค่ะ').trim();
+        return `<article class="account-card card ${sold?'is-sold':''}">${image}<div class="account-card-body"><div class="account-card-top"><span class="account-status ${statusClass}">${statusLabel}</span></div><h3>${escapeHtml(a.title||'Account')}</h3><p class="account-description account-description-preview">${escapeHtml(shortDescription)}</p><div class="account-card-bottom"><strong class="account-price">${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} <small>บาท</small></strong><a class="account-contact-button" href="/account/${encodeURIComponent(a.id)}">ดูเพิ่มเติม ↗</a></div></div></article>`;
+      }).join('') : '<div class="empty-state card account-empty"><span>୨୧</span><p>ยังไม่มี Account ลงขายในตอนนี้</p><small>แวะกลับมาดูรายการใหม่ได้อีกนะคะ ♡</small></div>';
+    }
+    if(currentUser&&!$('adminModal')?.hidden)renderAdminAccounts();
   }
   async function loadPublicAccounts(){
     if(!db){accounts=[];renderAccounts();return;}
-    try{const {data,error}=await db.from('accounts').select('*').order('created_at',{ascending:false});if(error)throw error;accounts=data||[];renderAccounts();renderAdminAccounts();renderAdminAccounts();}
-    catch(err){console.warn('Account listing unavailable until database schema is applied:',err);accounts=[];renderAccounts();}
+    try{
+      const cached=readCache('jellybet_cache_public_accounts_v1');
+      if(cached){accounts=cached;renderAccounts();return;}
+      const {data,error}=await db.from('accounts').select(PUBLIC_ACCOUNT_COLUMNS).order('created_at',{ascending:false});
+      if(error)throw error;
+      accounts=data||[];
+      writeCache('jellybet_cache_public_accounts_v1',accounts);
+      renderAccounts();
+    }catch(err){console.warn('Account listing unavailable until database schema is applied:',err);accounts=[];renderAccounts();}
   }
   function renderAdminAccounts(){
     const list=$('adminAccountList');if(!list)return;
     if(!currentUser){list.innerHTML='';return;}
     const groups=[{key:'available',label:'พร้อมขาย',icon:'♡'},{key:'installment',label:'ติดผ่อน',icon:'◷'},{key:'sold',label:'ขายแล้ว',icon:'✓'}];
-    const card=a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท</p><p class="admin-account-cost">ต้นทุน ${accountCosts.has(String(a.id))?Number(accountCosts.get(String(a.id))).toLocaleString('th-TH',{maximumFractionDigits:2})+' บาท':'ยังไม่ระบุ'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`;
+    const card=a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy" decoding="async">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท</p><p class="admin-account-cost">ต้นทุน ${accountCosts.has(String(a.id))?Number(accountCosts.get(String(a.id))).toLocaleString('th-TH',{maximumFractionDigits:2})+' บาท':'ยังไม่ระบุ'}</p></div></div><p>${escapeHtml(a.description||'ไม่มีรายละเอียด')}</p><div class="admin-item-actions"><button data-edit-account="${escapeHtml(a.id)}">แก้ไข</button><button data-toggle-account="${escapeHtml(a.id)}">เปลี่ยนสถานะ</button><button class="danger" data-delete-account="${escapeHtml(a.id)}">ลบ</button></div></div>`;
     list.innerHTML=accounts.length?groups.map(g=>{const items=accounts.filter(a=>(a.status||'available')===g.key);return `<section class="admin-account-group admin-account-group-${g.key}"><h4><span>${g.icon}</span> ${g.label}<small>${items.length} รายการ</small></h4><div class="admin-account-group-list">${items.length?items.map(card).join(''):'<div class="admin-account-group-empty">ไม่มี Account ในหมวดนี้ค่ะ</div>'}</div></section>`;}).join(''):'<div class="empty-state"><p>ยังไม่มี Account เพิ่มรายการแรกจากแบบฟอร์มด้านบนได้เลยค่ะ ♡</p></div>';
-    const installmentList=$('installmentAccountList');if(installmentList){const availableAccounts=accounts.filter(a=>a.status==='available');installmentList.innerHTML=availableAccounts.length?availableAccounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · พร้อมขาย</p></div></div><p>${a.installment_details?escapeHtml(a.installment_details):'ยังไม่ได้เพิ่มรายละเอียดการผ่อน'}</p><div class="admin-item-actions"><button data-edit-installment="${escapeHtml(a.id)}">${a.installment_details?'แก้ไขรายละเอียดการผ่อน':'เพิ่มรายละเอียดการผ่อน'}</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account สถานะพร้อมขายให้จัดการค่ะ ♡</p></div>';}
+    const installmentList=$('installmentAccountList');if(installmentList){const availableAccounts=accounts.filter(a=>a.status==='available');installmentList.innerHTML=availableAccounts.length?availableAccounts.map(a=>`<div class="admin-review-item admin-account-item"><div class="admin-account-heading">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="" loading="lazy" decoding="async">`:'<span class="admin-account-thumb">୨୧</span>'}<div><strong>${escapeHtml(a.title||'Account')}</strong><p>${Number(a.price||0).toLocaleString('th-TH',{maximumFractionDigits:2})} บาท · พร้อมขาย</p></div></div><p>${a.installment_details?escapeHtml(a.installment_details):'ยังไม่ได้เพิ่มรายละเอียดการผ่อน'}</p><div class="admin-item-actions"><button data-edit-installment="${escapeHtml(a.id)}">${a.installment_details?'แก้ไขรายละเอียดการผ่อน':'เพิ่มรายละเอียดการผ่อน'}</button></div></div>`).join(''):'<div class="empty-state"><p>ยังไม่มี Account สถานะพร้อมขายให้จัดการค่ะ ♡</p></div>';}
     renderAccountEntryImageOptions();
     renderAccountEntryPreview();
   }
@@ -148,15 +217,17 @@
   async function refreshAccounts(){
     if(!db)return;
     const [{data,error},{data:costRows,error:costError}]=await Promise.all([
-      db.from('accounts').select('*').order('created_at',{ascending:false}),
+      db.from('accounts').select(ADMIN_ACCOUNT_COLUMNS).order('created_at',{ascending:false}),
       db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
     if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
     if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_weekday_handoff.sql: '+costError.message,true);return;}
     accounts=data||[];
+    writeCache('jellybet_cache_public_accounts_v1',accounts);
     accountFinancials=new Map((costRows||[]).map(row=>[String(row.account_id),row]));
     accountCosts=new Map((costRows||[]).map(row=>[String(row.account_id),Number(row.acquisition_cost)]));
     renderAccounts();
+    renderAdminAccounts();
   }
   const installmentPlanMarker='[[JELLYBET_INSTALLMENT_PLANS]]';
   function installmentPlanCard(plan={},index=0){return '<section class="account-installment-plan-card" data-installment-plan><div class="account-installment-plan-heading"><strong>ตัวเลือกที่ '+(index+1)+'</strong><button type="button" class="account-installment-remove" data-remove-installment-plan aria-label="ลบตัวเลือกนี้">ลบ</button></div><label>ระยะเวลาผ่อน (เดือน)<input data-plan-months type="number" min="1" max="60" step="1" value="'+escapeHtml(plan.months??'')+'" placeholder="เช่น 1"></label><div class="account-admin-inline"><label>วางดาวน์ (บาท)<input data-plan-down type="number" min="0" step="1" value="'+escapeHtml(plan.down??'')+'" placeholder="เช่น 1,000"></label><label>ผ่อนต่ออีก (บาท)<input data-plan-total type="number" min="0" step="1" value="'+escapeHtml(plan.total??'')+'" placeholder="เช่น 4,000"></label></div><p class="account-plan-total-preview" data-plan-total-preview></p><label class="account-plan-weekly-label">ยอดชำระต่อรอบ (บาท)<input data-plan-weekly type="number" min="0" step="1" value="'+escapeHtml(plan.weekly??'')+'" placeholder="เช่น 1,000"></label></section>';}
@@ -216,36 +287,61 @@
     field.addEventListener('input',()=>{accountStructuredDetailsDirty=true;});
     field.addEventListener('change',()=>{accountStructuredDetailsDirty=true;});
   });
-  let reviewsExpanded=false;
+  const REVIEW_PAGE_SIZE = 5;
+  let visibleReviewLimit = REVIEW_PAGE_SIZE;
   function renderReviews(){
     const published=reviews.filter(r=>r.published);
     $('statReviews').textContent=published.length; $('reviewCount').textContent=`${published.length} รีวิว`;
     $('statRating').textContent=published.length ? (published.reduce((n,r)=>n+Number(r.rating||5),0)/published.length).toFixed(1) : '—';
-    const visibleReviews=reviewsExpanded?published:published.slice(0,5);
-    $('reviewList').innerHTML=published.length ? visibleReviews.map(r=>{const decorations=['♡','✿','♫','🐰','୨୧'];const decoration=decorations[Math.floor(Math.random()*decorations.length)];const leftDecoration=decorations[Math.floor(Math.random()*decorations.length)];return `<article class="review-card card"><span class="review-decoration review-decoration-left" aria-hidden="true">${leftDecoration}</span><span class="review-decoration" aria-hidden="true">${decoration}</span><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars review-hearts" aria-label="${Number(r.rating||5)} จาก 5 หัวใจ">${'♥'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'♡'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" referrerpolicy="no-referrer"></a>`:''}</article>`}).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
-    const moreButton=$('reviewMoreButton');if(moreButton){moreButton.hidden=published.length<=5;moreButton.textContent=reviewsExpanded?'แสดงรีวิวน้อยลง ♡':`ดูรีวิวเพิ่มเติม (${published.length-5}) ♡`;}
-    renderAdminReviews();
+    const visibleReviews=published.slice(0,visibleReviewLimit);
+    $('reviewList').innerHTML=published.length ? visibleReviews.map(r=>{const decorations=['♡','✿','♫','🐰','୨୧'];const decoration=decorations[Math.floor(Math.random()*decorations.length)];const leftDecoration=decorations[Math.floor(Math.random()*decorations.length)];return `<article class="review-card card"><span class="review-decoration review-decoration-left" aria-hidden="true">${leftDecoration}</span><span class="review-decoration" aria-hidden="true">${decoration}</span><div class="review-top"><div class="review-person"><span class="avatar">♡</span><div><strong>${escapeHtml(r.customer_name||'ลูกค้าท่านหนึ่ง')}</strong><span class="review-date">${r.created_at?new Date(r.created_at).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}):'ขอบคุณที่ไว้วางใจค่ะ'}</span></div></div><span class="stars review-hearts" aria-label="${Number(r.rating||5)} จาก 5 หัวใจ">${'♥'.repeat(Math.max(1,Math.min(5,Number(r.rating||5))))}${'♡'.repeat(5-Math.max(1,Math.min(5,Number(r.rating||5))))}</span></div><p class="review-text">${escapeHtml(r.review_text||'')}</p>${r.image_url?`<a href="${escapeHtml(r.image_url)}" target="_blank" rel="noopener noreferrer"><img class="review-image" src="${escapeHtml(r.image_url)}" alt="ภาพประกอบรีวิว" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>`:''}</article>`}).join('') : '<div class="empty-state card"><span>♡</span><p>ยังไม่มีรีวิวที่แสดงในตอนนี้</p><small>ขอบคุณที่แวะมาเยี่ยมชมร้านนะคะ</small></div>';
+    const moreButton=$('reviewMoreButton');
+    if(moreButton){
+      moreButton.hidden=published.length<=REVIEW_PAGE_SIZE;
+      const remainingCount=published.length-visibleReviews.length;
+      moreButton.textContent=remainingCount>0?`ดูรีวิวเพิ่มเติม (อีก ${remainingCount} รีวิว) ♡`:'แสดงรีวิวน้อยลง ♡';
+    }
+    if(currentUser&&!$('adminModal')?.hidden)renderAdminReviews();
   }
   async function loadPublic(){
     if(!db){ settings={...defaultSettings}; reviews=[]; accounts=[]; renderSettings(); renderReviews(); renderAccounts(); $('setupHint').textContent='เว็บแสดงตัวอย่างได้แล้ว หากต้องการบันทึกข้อมูลจริงและใช้หลังบ้าน ให้ตั้งค่า Supabase ตาม README.md'; return; }
     try{
+      const cachedSettings=readCache('jellybet_cache_settings_v1');
+      const cachedReviews=readCache('jellybet_cache_public_reviews_v1');
+      if(cachedSettings&&cachedReviews){
+        settings=normalizeSettingsAssets({...defaultSettings,...cachedSettings});
+        reviews=cachedReviews;
+        renderSettings();
+        renderReviews();
+        return;
+      }
       const [{data:setting,error:sErr},{data:reviewData,error:rErr}]=await Promise.all([
-        db.from('site_settings').select('*').eq('id',1).maybeSingle(),
-        db.from('reviews').select('*').eq('published',true).order('created_at',{ascending:false})
+        cachedSettings?Promise.resolve({data:cachedSettings,error:null}):db.from('site_settings').select(SITE_SETTINGS_COLUMNS).eq('id',1).maybeSingle(),
+        cachedReviews?Promise.resolve({data:cachedReviews,error:null}):db.from('reviews').select(REVIEW_COLUMNS).eq('published',true).order('created_at',{ascending:false})
       ]);
       if(sErr) throw sErr; if(rErr) throw rErr;
-      if(setting) settings={...defaultSettings,...setting};
-      reviews=reviewData||[]; renderSettings(); renderReviews();
+      if(setting){
+        settings=normalizeSettingsAssets({...defaultSettings,...setting});
+        if(!cachedSettings)writeCache('jellybet_cache_settings_v1',settings);
+      }
+      reviews=reviewData||[];
+      if(!cachedReviews)writeCache('jellybet_cache_public_reviews_v1',reviews);
+      renderSettings(); renderReviews();
     }catch(e){console.error(e);renderSettings();renderReviews();toast('โหลดข้อมูลไม่สำเร็จ โปรดตรวจสอบการตั้งค่า Supabase');}
   }
-  let siteMusic={title:'เพลงประจำร้าน',audio_url:'',enabled:false},musicStarted=false;
+  let siteMusic={title:'เพลงประจำร้าน',audio_url:'/assets/store-music.mp3',enabled:false},musicStarted=false;
   const musicAudio=$('siteMusicAudio');
   if(musicAudio)musicAudio.volume=0.05;
+  function ensureAudioSrc(){
+    if(!musicAudio||!siteMusic.audio_url)return;
+    const resolvedUrl=resolveStaticAssetUrl(siteMusic.audio_url,'/assets/store-music.mp3');
+    if(musicAudio.getAttribute('src')!==resolvedUrl)musicAudio.src=resolvedUrl;
+  }
   function renderMusic(){
     if(!musicAudio)return;
+    siteMusic.audio_url=resolveStaticAssetUrl(siteMusic.audio_url,'');
     const player=$('musicPlayer'),toggle=$('musicToggle');
     if(siteMusic.enabled&&siteMusic.audio_url){
-      if(musicAudio.src!==siteMusic.audio_url)musicAudio.src=siteMusic.audio_url;
       player.hidden=false;$('musicPlayerTitle').textContent=siteMusic.title||'เพลงประจำร้าน';
       if($('musicTitle'))$('musicTitle').value=siteMusic.title||'';
       if($('musicEnabled'))$('musicEnabled').checked=true;
@@ -255,20 +351,26 @@
   }
   async function loadSiteMusic(){
     if(!db)return;
-    const {data,error}=await db.from('site_music').select('*').eq('id',1).maybeSingle();
+    const cached=readCache('jellybet_cache_site_music_v1');
+    if(cached){siteMusic={...siteMusic,...cached,audio_url:resolveStaticAssetUrl(cached.audio_url,'')};renderMusic();return;}
+    const {data,error}=await db.from('site_music').select(SITE_MUSIC_COLUMNS).eq('id',1).maybeSingle();
     if(error){console.warn('โหลดเพลงไม่สำเร็จ',error.message);return;}
-    if(data)siteMusic={...siteMusic,...data};renderMusic();
+    if(data){
+      siteMusic={...siteMusic,...data,audio_url:resolveStaticAssetUrl(data.audio_url,'')};
+      writeCache('jellybet_cache_site_music_v1',siteMusic);
+    }
+    renderMusic();
   }
   async function startMusicAfterGesture(){
     if(musicStarted||!siteMusic.enabled||!siteMusic.audio_url||!musicAudio)return;
     musicStarted=true;
-    try{await musicAudio.play();document.removeEventListener('pointerdown',startMusicAfterGesture,true);document.removeEventListener('keydown',startMusicAfterGesture,true);renderMusic();}catch(err){musicStarted=false;console.info('เบราว์เซอร์ยังไม่อนุญาตให้เล่นเพลง',err);}
+    try{ensureAudioSrc();await musicAudio.play();document.removeEventListener('pointerdown',startMusicAfterGesture,true);document.removeEventListener('keydown',startMusicAfterGesture,true);renderMusic();}catch(err){musicStarted=false;console.info('เบราว์เซอร์ยังไม่อนุญาตให้เล่นเพลง',err);}
   }
   document.addEventListener('pointerdown',startMusicAfterGesture,{capture:true});
   document.addEventListener('keydown',startMusicAfterGesture,{capture:true});
   $('musicToggle')?.addEventListener('click',async()=>{
     if(!musicAudio)return;
-    if(musicAudio.paused){try{await musicAudio.play();musicStarted=true;}catch(e){toast('เบราว์เซอร์ไม่อนุญาตให้เล่นเพลง');}}
+    if(musicAudio.paused){try{ensureAudioSrc();await musicAudio.play();musicStarted=true;}catch(e){toast('เบราว์เซอร์ไม่อนุญาตให้เล่นเพลง');}}
     else{musicAudio.pause();}
     renderMusic();
   });
@@ -283,13 +385,14 @@
         if(!file.type.startsWith('audio/'))throw new Error('กรุณาเลือกไฟล์เสียงเท่านั้น');
         const ext=(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'');
         const path='admin/store-music-'+Date.now()+'.'+ext;
-        const {data,error}=await db.storage.from('shop-music').upload(path,file,{upsert:true,contentType:file.type});
+        const {data,error}=await db.storage.from('shop-music').upload(path,file,{cacheControl:'31536000',upsert:true,contentType:file.type});
         if(error)throw error;
         audio_url=db.storage.from('shop-music').getPublicUrl(data.path).data.publicUrl;
       }
       const payload={id:1,title:$('musicTitle').value.trim()||'เพลงประจำร้าน',audio_url,enabled:$('musicEnabled').checked,updated_at:new Date().toISOString()};
       const {error}=await db.from('site_music').upsert(payload,{onConflict:'id'});if(error)throw error;
-      siteMusic=payload;musicStarted=false;renderMusic();setMessage('musicMessage','บันทึกเพลงเรียบร้อยแล้ว ♡');toast('อัปเดตเพลงหน้าร้านแล้ว');
+      clearStorefrontCache();
+      siteMusic={...payload,audio_url:resolveStaticAssetUrl(payload.audio_url,'')};musicStarted=false;renderMusic();setMessage('musicMessage','บันทึกเพลงเรียบร้อยแล้ว ♡');toast('อัปเดตเพลงหน้าร้านแล้ว');
     }catch(err){setMessage('musicMessage','บันทึกเพลงไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
   $('removeMusic')?.addEventListener('click',async()=>{
@@ -297,11 +400,23 @@
     if(!confirm('ต้องการปิดเพลงบนหน้าร้านใช่ไหม?'))return;
     const {error}=await db.from('site_music').upsert({id:1,title:'เพลงประจำร้าน',audio_url:'',enabled:false,updated_at:new Date().toISOString()},{onConflict:'id'});
     if(error){setMessage('musicMessage','ปิดเพลงไม่สำเร็จ: '+error.message,true);return;}
+    clearStorefrontCache();
     siteMusic={title:'เพลงประจำร้าน',audio_url:'',enabled:false};renderMusic();setMessage('musicMessage','นำเพลงออกจากหน้าร้านแล้ว ♡');
   });
-  function openModal(){ $('adminModal').hidden=false; document.body.style.overflow='hidden'; if(!configured){$('setupHint').hidden=false; $('loginMessage').textContent='';} else {$('setupHint').hidden=true;} }
+  async function ensureAdminDataLoaded(){
+    if(!db||!currentUser||adminDataLoaded)return;
+    adminDataLoaded=true;
+    await Promise.all([loadAdminSettings(),refreshAdminReviews(),refreshAccounts()]);
+  }
+  function openModal(){
+    $('adminModal').hidden=false;
+    document.body.style.overflow='hidden';
+    if(!configured){$('setupHint').hidden=false; $('loginMessage').textContent='';}
+    else {$('setupHint').hidden=true;}
+    if(currentUser){showDashboard();ensureAdminDataLoaded();}
+  }
   function closeModal(){ $('adminModal').hidden=true; document.body.style.overflow=''; }
-  function showDashboard(){ $('adminLoginView').hidden=true; $('adminDashboard').hidden=false; renderSettings(); renderAdminReviews(); }
+  function showDashboard(){ $('adminLoginView').hidden=true; $('adminDashboard').hidden=false; renderSettings(); renderAdminReviews(); renderAdminAccounts(); }
   function showLogin(){ $('adminLoginView').hidden=false; $('adminDashboard').hidden=true; }
   function renderAdminReviews(){
     const list=$('adminReviewList'); if(!list)return;
@@ -395,6 +510,7 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
           }
         }
       }
+      clearStorefrontCache();
       resetAccountForm();await refreshAccounts();
       const sentToAccounting=['installment','sold'].includes(nextStatus)&&!!accountingHandoffAt;
       setMessage('accountMessage',sentToAccounting?'บันทึก Account และส่งเข้า Accounting อัตโนมัติแล้ว ♡':'บันทึกรายการและต้นทุนส่วนตัวเรียบร้อยแล้ว ♡');
@@ -433,15 +549,22 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
     const edit=e.target.closest('[data-edit-account]'),toggle=e.target.closest('[data-toggle-account]'),del=e.target.closest('[data-delete-account]');
     if(edit){const a=accounts.find(x=>String(x.id)===edit.dataset.editAccount);if(!a)return;populateAccountEditor(a,'แก้ไข Account');return;}
     if(toggle){const a=accounts.find(x=>String(x.id)===toggle.dataset.toggleAccount);if(!a)return;const nextStatus=a.status==='available'?'installment':a.status==='installment'?'sold':'available';populateAccountEditor(a,'เปลี่ยนสถานะ Account',nextStatus);toast('เลือกสถานะใหม่แล้ว กรุณากรอกข้อมูลที่แสดงและกดบันทึก');return;}
-    if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}await refreshAccounts();toast('ลบ Account แล้ว');}
+    if(del){const a=accounts.find(x=>String(x.id)===del.dataset.deleteAccount);if(!a||!confirm('ต้องการลบ Account รายการนี้ใช่ไหม?'))return;const {error}=await db.from('accounts').delete().eq('id',a.id);if(error){toast('ลบ Account ไม่สำเร็จ: '+error.message);return;}clearStorefrontCache();await refreshAccounts();toast('ลบ Account แล้ว');}
   }));
   async function refreshAdminReviews(){
     if(!db)return;
-    const {data,error}=await db.from('reviews').select('*').order('created_at',{ascending:false});
+    const {data,error}=await db.from('reviews').select(REVIEW_COLUMNS).order('created_at',{ascending:false});
     if(error){setMessage('reviewMessage','โหลดรีวิวไม่สำเร็จ: '+error.message,true);return;}
-    reviews=data||[]; renderReviews();
+    reviews=data||[];
+    writeCache('jellybet_cache_public_reviews_v1',reviews.filter(r=>r.published));
+    renderReviews();
   }
-  $('reviewMoreButton')?.addEventListener('click',()=>{reviewsExpanded=!reviewsExpanded;renderReviews();});
+  $('reviewMoreButton')?.addEventListener('click',()=>{
+    const publishedCount=reviews.filter(r=>r.published).length;
+    if(visibleReviewLimit<publishedCount)visibleReviewLimit+=REVIEW_PAGE_SIZE;
+    else visibleReviewLimit=REVIEW_PAGE_SIZE;
+    renderReviews();
+  });
   $('heartButton').addEventListener('click',()=>{const b=$('heartButton');b.classList.toggle('saved');b.textContent=b.classList.contains('saved')?'♥':'♡';toast(b.classList.contains('saved')?'เพิ่มหัวใจให้ jellybet แล้ว ♡':'ยกเลิกหัวใจแล้ว');});
   document.querySelectorAll('#openAdmin, #openAdminIcon').forEach(button=>button.addEventListener('click',openModal)); $('closeAdmin').addEventListener('click',closeModal);
   $('adminModal').addEventListener('click',e=>{if(e.target===$('adminModal'))closeModal();});
@@ -449,30 +572,69 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
   $('loginForm').addEventListener('submit',async e=>{
     e.preventDefault(); if(!db){setMessage('loginMessage','ยังไม่ได้ตั้งค่า Supabase โปรดดู README.md',true);return;}
     const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('loginMessage','กำลังเข้าสู่ระบบ…');
-    try{const {data,error}=await db.auth.signInWithPassword({email:$('adminEmail').value.trim(),password:$('adminPassword').value});if(error)throw error;currentUser=data.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();await refreshAccounts();await cleanupSoldAccountImages();setMessage('loginMessage','');}
+    try{const {data,error}=await db.auth.signInWithPassword({email:$('adminEmail').value.trim(),password:$('adminPassword').value});if(error)throw error;currentUser=data.user;adminDataLoaded=false;showDashboard();await ensureAdminDataLoaded();await cleanupSoldAccountImages();setMessage('loginMessage','');}
     catch(err){setMessage('loginMessage','เข้าสู่ระบบไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
-  async function loadAdminSettings(){if(!db)return;const {data,error}=await db.from('site_settings').select('*').eq('id',1).maybeSingle();if(error){toast('อ่านข้อมูลหลังบ้านไม่สำเร็จ');return;}if(data){settings={...defaultSettings,...data};renderSettings();}}
+  async function loadAdminSettings(){if(!db)return;const {data,error}=await db.from('site_settings').select(SITE_SETTINGS_COLUMNS).eq('id',1).maybeSingle();if(error){toast('อ่านข้อมูลหลังบ้านไม่สำเร็จ');return;}if(data){settings=normalizeSettingsAssets({...defaultSettings,...data});writeCache('jellybet_cache_settings_v1',settings);renderSettings();}}
   $('settingsForm').addEventListener('submit',async e=>{
     e.preventDefault();if(!db)return;const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('settingsMessage','กำลังบันทึก…');
     try{
     let avatar_url=settings.avatar_url||'', cover_url=settings.cover_url||'', mood_bunny_url=settings.mood_bunny_url||'', mood_vanity_url=settings.mood_vanity_url||'';
-    if($('shopAvatarFile').files[0]) avatar_url=await uploadImage($('shopAvatarFile').files[0],'shop-images','admin');
-    if($('shopCoverFile').files[0]) cover_url=await uploadImage($('shopCoverFile').files[0],'shop-images','admin');
-    if($('moodBunnyFile').files[0]) mood_bunny_url=await uploadImage($('moodBunnyFile').files[0],'shop-images','admin/moodboard');
-    if($('moodVanityFile').files[0]) mood_vanity_url=await uploadImage($('moodVanityFile').files[0],'shop-images','admin/moodboard');
+    if($('shopAvatarFile').files[0]) avatar_url=await uploadImage($('shopAvatarFile').files[0],'shop-images','admin',480);
+    if($('shopCoverFile').files[0]) cover_url=await uploadImage($('shopCoverFile').files[0],'shop-images','admin',1600);
+    if($('moodBunnyFile').files[0]) mood_bunny_url=await uploadImage($('moodBunnyFile').files[0],'shop-images','admin/moodboard',960);
+    if($('moodVanityFile').files[0]) mood_vanity_url=await uploadImage($('moodVanityFile').files[0],'shop-images','admin/moodboard',960);
     const portfolio_drive_url=$('editPortfolioDriveUrl')?.value.trim()||'';if(portfolio_drive_url&&!/^https:\/\/(drive|docs)\.google\.com\//i.test(portfolio_drive_url)){setMessage('settingsMessage','กรุณาใส่ลิงก์ Google Drive หรือ Google Docs ที่ขึ้นต้นด้วย https://',true);return;}const payload={id:1,avatar_url,cover_url,mood_bunny_url,mood_vanity_url,portfolio_drive_url,account_entry_image_1:$('accountEntryImage1')?.value||'',account_entry_image_2:$('accountEntryImage2')?.value||'',shop_name:$('editShopName').value.trim(),intro:$('editIntro').value.trim(),handle:$('editHandle').value.trim(),status:$('editStatus').value,line:$('editLine').value.trim(),x:$('editX').value.trim(),instagram:$('editInstagram').value.trim(),facebook:$('editFacebook').value.trim(),theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};
-    const {error}=await db.from('site_settings').upsert(payload,{onConflict:'id'});if(error)throw error;settings={...settings,...payload};renderSettings();$('shopAvatarFile').value='';$('shopCoverFile').value='';$('moodBunnyFile').value='';$('moodVanityFile').value='';setMessage('settingsMessage','บันทึกข้อมูลเรียบร้อยแล้ว ♡');toast('บันทึกข้อมูลร้านแล้ว ♡');}
+    const {error}=await db.from('site_settings').upsert(payload,{onConflict:'id'});if(error)throw error;clearStorefrontCache();settings=normalizeSettingsAssets({...settings,...payload});writeCache('jellybet_cache_settings_v1',settings);renderSettings();$('shopAvatarFile').value='';$('shopCoverFile').value='';$('moodBunnyFile').value='';$('moodVanityFile').value='';setMessage('settingsMessage','บันทึกข้อมูลเรียบร้อยแล้ว ♡');toast('บันทึกข้อมูลร้านแล้ว ♡');}
     catch(err){setMessage('settingsMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
-  async function uploadImage(file,bucket,folder){
+  async function compressImageToWebp(file, maxDimension = 1440, quality = 0.82) {
+    if (!file || file.type === 'image/gif') return file;
+    return new Promise(resolve => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        let width = img.naturalWidth || img.width || 1;
+        let height = img.naturalHeight || img.height || 1;
+        if (width > maxDimension || height > maxDimension) {
+          if (width >= height) {
+            height = Math.max(1, Math.round((height * maxDimension) / width));
+            width = maxDimension;
+          } else {
+            width = Math.max(1, Math.round((width * maxDimension) / height));
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(file); return; }
+          const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+          const webpFile = new File([blob], baseName + '.webp', {type: 'image/webp', lastModified: Date.now()});
+          resolve(webpFile);
+        }, 'image/webp', quality);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+      img.src = objectUrl;
+    });
+  }
+  async function uploadImage(file,bucket,folder,maxDimension=1440){
     if(!file)return null;
     if(!file.type.startsWith('image/'))throw new Error('กรุณาเลือกไฟล์รูปภาพ');
     if(file.size>5*1024*1024)throw new Error('ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB');
     if(!db)throw new Error('ยังไม่ได้เชื่อมต่อฐานข้อมูล');
-    const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    const optimizedFile=await compressImageToWebp(file,maxDimension);
+    const ext=(optimizedFile.name.split('.').pop()||'webp').toLowerCase().replace(/[^a-z0-9]/g,'')||'webp';
     const path=`${folder}/${crypto.randomUUID()}.${ext}`;
-    const {error}=await db.storage.from(bucket).upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+    const {error}=await db.storage.from(bucket).upload(path,optimizedFile,{cacheControl:'31536000',upsert:false,contentType:optimizedFile.type});
     if(error)throw error;
     const {data}=db.storage.from(bucket).getPublicUrl(path); return data.publicUrl;
   }
@@ -486,9 +648,10 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
     e.preventDefault(); if(!db){setMessage('customerReviewMessage','ระบบยังไม่พร้อมรับรีวิว กรุณาลองใหม่ภายหลัง',true);return;}
     const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');btn.disabled=true;setMessage('customerReviewMessage','กำลังส่งรีวิว…');
     try{
-      let image_url=null;const file=$('customerReviewImage').files[0];if(file)image_url=await uploadImage(file,'review-images','customer');
+      let image_url=null;const file=$('customerReviewImage').files[0];if(file)image_url=await uploadImage(file,'review-images','customer',1200);
       const payload={customer_name:$('customerReviewName').value.trim()||'Anonymous',rating:Number($('customerReviewRating').value)||5,review_text:$('customerReviewText').value.trim(),image_url,published:true};
       const {error}=await db.from('reviews').insert(payload);if(error)throw error;
+      clearStorefrontCache();
       form.reset();const prev=$('customerReviewImagePreview');if(prev){prev.hidden=true;prev.removeAttribute('src');}
       setMessage('customerReviewMessage','รีวิวของคุณแสดงบนเว็บไซต์แล้ว ขอบคุณมากค่ะ ♡');toast('ส่งรีวิวเรียบร้อยแล้ว ♡');
     }catch(err){setMessage('customerReviewMessage','ส่งรีวิวไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
@@ -500,23 +663,23 @@ const nextStatus=$('accountStatus').value,previousStatus=existing?.status||'avai
   $('reviewForm').addEventListener('submit',async e=>{
     e.preventDefault();if(!db)return;const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('reviewMessage','กำลังบันทึก…');
     const id=$('editReviewId').value;const payload={customer_name:$('reviewCustomer').value.trim(),rating:Number($('reviewRating').value),review_text:$('reviewText').value.trim(),image_url:reviews.find(r=>String(r.id)===id)?.image_url||null,published:$('reviewPublished').checked};
-    try{const imageFile=$('reviewImageFile').files[0];if(imageFile)payload.image_url=await uploadImage(imageFile,'review-images','customer');let result=id?await db.from('reviews').update(payload).eq('id',id):await db.from('reviews').insert(payload);if(result.error)throw result.error;setMessage('reviewMessage','บันทึกรีวิวเรียบร้อยแล้ว ♡');$('reviewForm').reset();if($('reviewImagePreview')){$('reviewImagePreview').hidden=true;$('reviewImagePreview').removeAttribute('src');}$('editReviewId').value='';$('reviewRating').value='5';$('reviewPublished').checked=true;$('reviewFormTitle').textContent='เพิ่มรีวิวใหม่';$('cancelReviewEdit').hidden=true;await refreshAdminReviews();toast('บันทึกรีวิวแล้ว ♡');}
+    try{const imageFile=$('reviewImageFile').files[0];if(imageFile)payload.image_url=await uploadImage(imageFile,'review-images','customer',1200);let result=id?await db.from('reviews').update(payload).eq('id',id):await db.from('reviews').insert(payload);if(result.error)throw result.error;clearStorefrontCache();setMessage('reviewMessage','บันทึกรีวิวเรียบร้อยแล้ว ♡');$('reviewForm').reset();if($('reviewImagePreview')){$('reviewImagePreview').hidden=true;$('reviewImagePreview').removeAttribute('src');}$('editReviewId').value='';$('reviewRating').value='5';$('reviewPublished').checked=true;$('reviewFormTitle').textContent='เพิ่มรีวิวใหม่';$('cancelReviewEdit').hidden=true;await refreshAdminReviews();toast('บันทึกรีวิวแล้ว ♡');}
     catch(err){setMessage('reviewMessage','บันทึกไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}
   });
   $('cancelReviewEdit').addEventListener('click',()=>{$('reviewForm').reset();if($('reviewImagePreview')){$('reviewImagePreview').hidden=true;$('reviewImagePreview').removeAttribute('src');}$('editReviewId').value='';$('reviewRating').value='5';$('reviewPublished').checked=true;$('reviewFormTitle').textContent='เพิ่มรีวิวใหม่';$('cancelReviewEdit').hidden=true;setMessage('reviewMessage','');});
   $('adminReviewList').addEventListener('click',async e=>{
     const edit=e.target.closest('[data-edit-review]'),toggle=e.target.closest('[data-toggle-review]'),del=e.target.closest('[data-delete-review]');
     if(edit){const r=reviews.find(x=>String(x.id)===edit.dataset.editReview);if(!r)return;$('editReviewId').value=r.id;$('reviewCustomer').value=r.customer_name||'';$('reviewRating').value=String(r.rating||5);$('reviewText').value=r.review_text||'';if($('reviewImagePreview')){ $('reviewImagePreview').src=r.image_url||''; $('reviewImagePreview').hidden=!r.image_url; }$('reviewPublished').checked=!!r.published;$('reviewFormTitle').textContent='แก้ไขรีวิว';$('cancelReviewEdit').hidden=false;$('reviewForm').scrollIntoView({behavior:'smooth',block:'start'});return;}
-    if(toggle){const r=reviews.find(x=>String(x.id)===toggle.dataset.toggleReview);if(!r)return;const {error}=await db.from('reviews').update({published:!r.published}).eq('id',r.id);if(error){toast('เปลี่ยนสถานะไม่สำเร็จ');return;}await refreshAdminReviews();toast('อัปเดตสถานะรีวิวแล้ว');return;}
-    if(del){const r=reviews.find(x=>String(x.id)===del.dataset.deleteReview);if(!r||!confirm('ต้องการลบรีวิวนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้'))return;const {error}=await db.from('reviews').delete().eq('id',r.id);if(error){toast('ลบรีวิวไม่สำเร็จ');return;}await refreshAdminReviews();toast('ลบรีวิวแล้ว');}
+    if(toggle){const r=reviews.find(x=>String(x.id)===toggle.dataset.toggleReview);if(!r)return;const {error}=await db.from('reviews').update({published:!r.published}).eq('id',r.id);if(error){toast('เปลี่ยนสถานะไม่สำเร็จ');return;}clearStorefrontCache();await refreshAdminReviews();toast('อัปเดตสถานะรีวิวแล้ว');return;}
+    if(del){const r=reviews.find(x=>String(x.id)===del.dataset.deleteReview);if(!r||!confirm('ต้องการลบรีวิวนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้'))return;const {error}=await db.from('reviews').delete().eq('id',r.id);if(error){toast('ลบรีวิวไม่สำเร็จ');return;}clearStorefrontCache();await refreshAdminReviews();toast('ลบรีวิวแล้ว');}
   });
   $('themePreset')?.addEventListener('change',()=>{const preset=themePresets[$('themePreset').value];if(preset)setThemeInputs(preset);else updateThemePreview();});
   ['themeBg','themeCard','themePrimary','themeSoft','themeText'].forEach(id=>$(id)?.addEventListener('input',()=>{if($('themePreset'))$('themePreset').value='custom';updateThemePreview();}));
   $('resetTheme')?.addEventListener('click',()=>{const preset=themePresets[$('themePreset').value]||themePresets.coquette;setThemeInputs(preset);toast('แสดงตัวอย่างสีแล้ว อย่าลืมกดบันทึกนะคะ');});
-  $('themeForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!db){setMessage('themeMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกธีม',true);return;}if(!currentUser){setMessage('themeMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('themeMessage','กำลังบันทึกธีม…');try{const payload={id:1,theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};const {error}=await db.from('site_settings').upsert({...settings,...payload},{onConflict:'id'});if(error)throw error;settings={...settings,...payload};applyTheme(settings);setMessage('themeMessage','บันทึกธีมเรียบร้อยแล้ว ♡');toast('บันทึกธีมเว็บไซต์แล้ว ♡');}catch(err){setMessage('themeMessage','บันทึกธีมไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}});
+  $('themeForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!db){setMessage('themeMessage','ต้องเชื่อมต่อ Supabase ก่อนบันทึกธีม',true);return;}if(!currentUser){setMessage('themeMessage','กรุณาเข้าสู่ระบบเจ้าของร้านก่อน',true);return;}const btn=e.currentTarget.querySelector('button[type="submit"]');btn.disabled=true;setMessage('themeMessage','กำลังบันทึกธีม…');try{const payload={id:1,theme_preset:$('themePreset').value,theme_bg:$('themeBg').value,theme_card:$('themeCard').value,theme_primary:$('themePrimary').value,theme_soft:$('themeSoft').value,theme_text:$('themeText').value,updated_at:new Date().toISOString()};const {error}=await db.from('site_settings').upsert({...settings,...payload},{onConflict:'id'});if(error)throw error;clearStorefrontCache();settings=normalizeSettingsAssets({...settings,...payload});writeCache('jellybet_cache_settings_v1',settings);applyTheme(settings);setMessage('themeMessage','บันทึกธีมเรียบร้อยแล้ว ♡');toast('บันทึกธีมเว็บไซต์แล้ว ♡');}catch(err){setMessage('themeMessage','บันทึกธีมไม่สำเร็จ: '+err.message,true);}finally{btn.disabled=false;}});
   document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b===btn));$('settingsTab').hidden=btn.dataset.tab!=='settings';$('themeAdminTab').hidden=btn.dataset.tab!=='themeAdmin';$('accountsAdminTab').hidden=btn.dataset.tab!=='accountsAdmin';$('reviewsAdminTab').hidden=btn.dataset.tab!=='reviewsAdmin';$('installmentAdminTab').hidden=btn.dataset.tab!=='installmentAdmin';$('musicAdminTab').hidden=btn.dataset.tab!=='musicAdmin';if(btn.dataset.tab==='musicAdmin')loadSiteMusic();if(btn.dataset.tab==='reviewsAdmin')refreshAdminReviews();if(btn.dataset.tab==='accountsAdmin'||btn.dataset.tab==='installmentAdmin')refreshAccounts();if(btn.dataset.tab==='themeAdmin')setThemeInputs(settings);}));
-  $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;accountCosts.clear();showLogin();closeModal();toast('ออกจากระบบแล้ว');});
-  if(db){db.auth.getSession().then(async({data})=>{if(data.session){currentUser=data.session.user;showDashboard();await loadAdminSettings();await refreshAdminReviews();await refreshAccounts();}});}
+  $('logoutButton').addEventListener('click',async()=>{if(db)await db.auth.signOut();currentUser=null;adminDataLoaded=false;accountCosts.clear();showLogin();closeModal();toast('ออกจากระบบแล้ว');});
+  if(db){db.auth.getSession().then(({data})=>{if(data.session){currentUser=data.session.user;showDashboard();}});}
   document.querySelectorAll('.nav-item').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===a));}));
   // Floating flowers on clicks and touch interactions, without blocking normal controls.
   const heartLayer=$('heartEffects');
