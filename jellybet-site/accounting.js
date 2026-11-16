@@ -5,8 +5,9 @@
   const db = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
   const START_DATE = '2026-11-01';
   const INSTALLMENT_MARKER = '[[JELLYBET_INSTALLMENT_PLANS]]';
-  const ACCOUNTING_ENTRY_COLUMNS = 'id,source_account_id,account_title,sale_date,sale_amount,cost_amount,opening_balance,weekly_amount,installment_due_weekday,installment_schedule_type,installment_due_date,is_carryover,is_forfeited,forfeited_at,notes,created_at,updated_at';
+  const ACCOUNTING_ENTRY_COLUMNS = 'id,source_account_id,account_title,sale_date,sale_amount,cost_amount,opening_balance,weekly_amount,installment_due_weekday,installment_schedule_type,installment_due_date,is_carryover,notes,created_at,updated_at';
   const ACCOUNTING_PAYMENT_COLUMNS = 'id,entry_id,amount,paid_on,payment_type,note,created_at';
+  const isMissingColumnError = err => /column .* does not exist|schema cache|could not find .*column/i.test(err && (err.message || String(err)) || '');
   let currentUser = null;
   let accounts = [];
   let entries = [];
@@ -370,7 +371,7 @@
           entryNote = 'สร้างอัตโนมัติจากสถานะขายแล้ว';
         }
 
-        const {data: entry, error: entryError} = await db.from('accounting_entries').insert({
+        const entryPayload = {
           source_account_id: account.id,
           account_title: account.title || 'Account #' + account.id,
           sale_date: saleDate,
@@ -383,7 +384,12 @@
           installment_due_date: dueDate,
           is_carryover: false,
           notes: entryNote
-        }).select(ACCOUNTING_ENTRY_COLUMNS).single();
+        };
+        let {data: entry, error: entryError} = await db.from('accounting_entries').insert(entryPayload).select(ACCOUNTING_ENTRY_COLUMNS).single();
+        if (entryError && isMissingColumnError(entryError)) {
+          const {installment_schedule_type: _st, installment_due_date: _dd, ...legacyPayload} = entryPayload;
+          ({data: entry, error: entryError} = await db.from('accounting_entries').insert(legacyPayload).select('*').single());
+        }
 
         if (entryError) {
           console.warn('Auto-sync entry failed for account', account.id, entryError);
@@ -410,19 +416,31 @@
     return syncedCount;
   }
 
+  async function selectQueryWithFallback(table, columns, orderBy) {
+    let query = db.from(table).select(columns);
+    if (orderBy) query = query.order(orderBy, {ascending: false});
+    const res = await query;
+    if (res.error && isMissingColumnError(res.error)) {
+      let fallbackQuery = db.from(table).select('*');
+      if (orderBy) fallbackQuery = fallbackQuery.order(orderBy, {ascending: false});
+      return fallbackQuery;
+    }
+    return res;
+  }
+
   async function loadData() {
     setMessage('กำลังโหลดข้อมูลบัญชี…');
     const results = await Promise.all([
-      db.from('accounting_entries').select(ACCOUNTING_ENTRY_COLUMNS).order('sale_date', {ascending:false}),
-      db.from('accounting_payments').select(ACCOUNTING_PAYMENT_COLUMNS).order('paid_on', {ascending:false}),
-      db.from('accounts').select('id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at').order('created_at', {ascending:false}),
-      db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
+      selectQueryWithFallback('accounting_entries', ACCOUNTING_ENTRY_COLUMNS, 'sale_date'),
+      selectQueryWithFallback('accounting_payments', ACCOUNTING_PAYMENT_COLUMNS, 'paid_on'),
+      selectQueryWithFallback('accounts', 'id,title,price,status,installment_details,sale_started_at,accounting_carryover,created_at', 'created_at'),
+      selectQueryWithFallback('account_private_financials', 'account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
     const issue = results.find(result => result.error);
     if (issue) {
-      const message=issue.error.message||String(issue.error);
-      if (/column .* does not exist|schema cache|could not find .*column/i.test(message)) {
-        throw new Error('ฐานข้อมูลยังไม่ได้อัปเดต กรุณารัน Migration 20261102_account_status_weekday_handoff.sql ใน Supabase SQL Editor แล้วโหลดหน้านี้ใหม่');
+      const message = issue.error.message || String(issue.error);
+      if (isMissingColumnError(issue.error)) {
+        throw new Error('ฐานข้อมูลยังขาดคอลัมน์บางส่วน (' + message + ') กรุณารันไฟล์ Migration ล่าสุดใน Supabase SQL Editor แล้วโหลดหน้านี้ใหม่');
       }
       throw issue.error;
     }
@@ -502,7 +520,11 @@
     if (!carryover && account.status === 'installment' && plans.length && payload.sale_amount < Number(plan.down || 0) + Number(plan.total || 0)) {
       throw new Error('ยอดขายจริงน้อยกว่ายอดรวมของแผนผ่อนที่เลือก โปรดตรวจสอบ');
     }
-    const {data:entry,error} = await db.from('accounting_entries').insert(payload).select(ACCOUNTING_ENTRY_COLUMNS).single();
+    let {data:entry,error} = await db.from('accounting_entries').insert(payload).select(ACCOUNTING_ENTRY_COLUMNS).single();
+    if (error && isMissingColumnError(error)) {
+      const {installment_schedule_type: _st, installment_due_date: _dd, ...legacyPayload} = payload;
+      ({data:entry,error} = await db.from('accounting_entries').insert(legacyPayload).select('*').single());
+    }
     if (error) throw error;
     if (received > 0) {
       const {error:paymentError} = await db.from('accounting_payments').insert({

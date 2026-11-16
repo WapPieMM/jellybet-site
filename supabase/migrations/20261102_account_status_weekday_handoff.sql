@@ -1,15 +1,37 @@
 -- Switch Account installment due tracking to a recurring weekday.
 -- Explicit private handoff timestamp lets Accounting discover status changes.
 alter table public.account_private_financials
+  add column if not exists installment_due_date date;
+
+alter table public.account_private_financials
+  add column if not exists actual_sale_price numeric(12,2)
+  check (actual_sale_price is null or actual_sale_price >= 0);
+
+alter table public.account_private_financials
   add column if not exists installment_due_weekday smallint
   check (installment_due_weekday is null or installment_due_weekday between 0 and 6);
+
+alter table public.account_private_financials
+  add column if not exists installment_schedule_type text not null default 'weekly'
+  check (installment_schedule_type in ('weekly','daily','every_other_day'));
+
+alter table public.account_private_financials
+  add column if not exists installment_plan_index smallint not null default 0
+  check (installment_plan_index >= 0);
 
 alter table public.account_private_financials
   add column if not exists accounting_handoff_at timestamptz;
 
 alter table public.accounting_entries
+  add column if not exists installment_due_date date;
+
+alter table public.accounting_entries
   add column if not exists installment_due_weekday smallint
   check (installment_due_weekday is null or installment_due_weekday between 0 and 6);
+
+alter table public.accounting_entries
+  add column if not exists installment_schedule_type text not null default 'weekly'
+  check (installment_schedule_type in ('weekly','daily','every_other_day'));
 
 -- Preserve the weekday from the one-off dates entered in the previous version.
 update public.account_private_financials

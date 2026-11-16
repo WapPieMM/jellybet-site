@@ -216,12 +216,15 @@
   }
   async function refreshAccounts(){
     if(!db)return;
-    const [{data,error},{data:costRows,error:costError}]=await Promise.all([
+    let [{data,error},{data:costRows,error:costError}]=await Promise.all([
       db.from('accounts').select(ADMIN_ACCOUNT_COLUMNS).order('created_at',{ascending:false}),
       db.from('account_private_financials').select('account_id,acquisition_cost,installment_due_weekday,installment_schedule_type,installment_due_date,installment_plan_index,accounting_handoff_at,actual_sale_price')
     ]);
+    if(costError&&/column .* does not exist|schema cache|could not find .*column/i.test(costError.message||String(costError))){
+      ({data:costRows,error:costError}=await db.from('account_private_financials').select('*'));
+    }
     if(error){setMessage('accountMessage','โหลดรายการ Account ไม่สำเร็จ: '+error.message,true);return;}
-    if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ กรุณารัน Migration 20261102_account_status_weekday_handoff.sql: '+costError.message,true);return;}
+    if(costError){setMessage('accountMessage','โหลดข้อมูลการเงินส่วนตัวไม่สำเร็จ: '+costError.message,true);return;}
     accounts=data||[];
     writeCache('jellybet_cache_public_accounts_v1',accounts);
     accountFinancials=new Map((costRows||[]).map(row=>[String(row.account_id),row]));
