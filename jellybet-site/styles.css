@@ -960,3 +960,124 @@ html.dream-motion-ready .dream-reveal.is-visible{opacity:1;transform:translate3d
   .accounting-due-today-actions .accounting-due-action{flex:1 1 auto;text-align:center}
 }
 
+/* Mobile-dense 2-column layout for /accounts so multiple IDs are visible at once */
+.accounts-page-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+@media(min-width:640px){
+  .accounts-page-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:16px;
+  }
+}
+@media(max-width:639px){
+  .accounts-page-main{
+    padding-top:12px;
+  }
+  .accounts-page-heading{
+    margin-bottom:4px;
+    gap:8px;
+  }
+  .accounts-page-heading .eyebrow{
+    margin-bottom:2px;
+    font-size:8px;
+  }
+  .accounts-page-heading h1{
+    font-size:22px;
+  }
+  .accounts-page-intro{
+    font-size:11.5px;
+    line-height:1.5;
+    margin:4px 0 10px;
+  }
+  .account-status-filters{
+    margin:8px 0 12px;
+    padding:4px;
+    gap:5px;
+  }
+  .account-filter{
+    min-height:34px;
+    padding:6px 6px;
+    font-size:11px;
+    gap:5px;
+  }
+  .account-grid,
+  .accounts-page-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px;
+  }
+  .accounts-page-grid .account-card,
+  .account-grid .account-card{
+    position:relative;
+    border-radius:16px;
+  }
+  .accounts-page-grid .account-card > .account-image,
+  .account-grid .account-card > .account-image,
+  .accounts-page-grid .account-card > .account-image-placeholder,
+  .account-grid .account-card > .account-image-placeholder{
+    aspect-ratio:4/3!important;
+    height:auto!important;
+    object-fit:cover!important;
+  }
+  .accounts-page-grid .account-card-top,
+  .account-grid .account-card-top{
+    position:absolute;
+    top:7px;
+    left:7px;
+    z-index:2;
+  }
+  .accounts-page-grid .account-status,
+  .account-grid .account-status{
+    padding:3px 7px;
+    font-size:9px;
+    box-shadow:0 2px 8px rgba(71,54,61,.14);
+    backdrop-filter:blur(6px);
+  }
+  .accounts-page-grid .account-card-body,
+  .account-grid .account-card-body{
+    padding:9px 10px 10px;
+    gap:4px;
+  }
+  .accounts-page-grid .account-card h3,
+  .account-grid .account-card h3{
+    font-size:12px;
+    line-height:1.35;
+    display:-webkit-box;
+    -webkit-line-clamp:1;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .accounts-page-grid .account-description-preview,
+  .account-grid .account-description-preview{
+    font-size:10px;
+    line-height:1.4;
+    -webkit-line-clamp:1;
+  }
+  .accounts-page-grid .account-card-bottom,
+  .account-grid .account-card-bottom{
+    margin-top:4px;
+    gap:6px;
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .accounts-page-grid .account-price,
+  .account-grid .account-price{
+    font-size:13.5px;
+    line-height:1.2;
+  }
+  .accounts-page-grid .account-price small,
+  .account-grid .account-price small{
+    font-size:9px;
+  }
+  .accounts-page-grid .account-contact-button,
+  .account-grid .account-contact-button{
+    min-height:30px;
+    padding:5px 8px;
+    font-size:10.5px;
+    border-radius:999px;
+  }
+}
+
+

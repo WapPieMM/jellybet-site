@@ -5,7 +5,7 @@
   const esc = (s = '') => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const PUBLIC_ACCOUNT_COLUMNS = 'id,title,price,status,image_url,description,created_at';
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const PAGE_SIZE = 6;
+  const PAGE_SIZE = 12;
   let accounts = [], activeStatus = 'available', visibleLimit = PAGE_SIZE;
   const statusNames = {available:'พร้อมขาย',installment:'ติดผ่อน',sold:'ขายแล้ว'};
 
